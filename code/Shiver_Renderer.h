@@ -70,6 +70,22 @@ struct spritedata
     ivec2 SpriteSize;
 };
 
+struct orthocamera2d
+{
+    mat4 Matrix;
+    vec2 Position;
+    vec2 Viewport;
+    
+    real32 Zoom;
+};
+
+enum CameraState
+{
+    CAMERA_GAME,
+    CAMERA_UI,
+    CAMERA_EDITOR
+};
+
 struct glrenderdata
 {
     uint32 TransformCounter;
@@ -79,10 +95,12 @@ struct glrenderdata
     GLuint ScreenSizeID;
     GLuint OrthographicMatrixID;
     
-    texture2d Textures[31];
     shader Shaders[1];
     
     spritedata Sprites[20];
+    texture2d Textures[31];
+    
+    orthocamera2d Cameras[3];
 };
 
 internal void 
@@ -104,16 +122,33 @@ sh_glGetSprite(sprites SpriteID, glrenderdata *RenderData)
 }
 
 internal void
-sh_glDrawStaticSprite2D(sprites SpriteID, vec2 Position, glrenderdata *RenderData)
+sh_glDrawStaticSprite2D(sprites SpriteID, vec2 Position, ivec2 Size, glrenderdata *RenderData)
 {
     spritedata SpriteData = sh_glGetSprite(SpriteID, RenderData);
     
     renderertransform Transform  = {};
     Transform.AtlasOffset = SpriteData.AtlasOffset;
     Transform.SpriteSize = SpriteData.SpriteSize;
-    Transform.WorldPosition = Position;
-    Transform.Size = {100.0f, 100.0f};
+    Transform.Size = v2Cast(Size);
+    Transform.WorldPosition = Position - (Transform.Size / 2.);
     RenderData->RendererTransforms[RenderData->TransformCounter++] = Transform;
+}
+
+internal mat4
+CreateOrthographicMatrix(vec4 Data)
+{
+    mat4 Result = {};
+    
+    Result.Elements[3][0] = -(Data.Right + Data.Left) / (Data.Right - Data.Left);
+    Result.Elements[3][1] =  (Data.Top + Data.Bottom) / (Data.Top - Data.Bottom);
+    Result.Elements[3][2] =  0.0f;
+    
+    Result.Elements[0][0] = 2.0f / (Data.Right - Data.Left);
+    Result.Elements[1][1] = 2.0f / (Data.Top - Data.Bottom);
+    Result.Elements[2][2] = 1.0f / (1.0f - 0.0f);
+    Result.Elements[3][3] = 1.0f;
+    
+    return(Result);
 }
 
 #endif //_SHIVER__RENDERER_H

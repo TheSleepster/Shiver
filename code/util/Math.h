@@ -803,6 +803,14 @@ union vec4
         real32 b;
         real32 a;
     };
+    
+    struct 
+    {
+        real32 Left;
+        real32 Right;
+        real32 Top;
+        real32 Bottom;
+    };
 };
 
 // INTEGER VECTOR 4

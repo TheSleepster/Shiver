@@ -211,6 +211,11 @@ InitializeOpenGLRendererData(glrenderdata *RenderData, MemoryArena *TransientSto
             sh_glCreateProgram(RenderData->Shaders[BASIC].VertexShader, RenderData->Shaders[BASIC].FragmentShader);
     }
     
+    RenderData->ScreenSizeID = 
+        glGetUniformLocation(RenderData->Shaders[BASIC].Shader, "ScreenSize");
+    RenderData->OrthographicMatrixID = 
+        glGetUniformLocation(RenderData->Shaders[BASIC].Shader, "CameraMatrix");
+    
     GLuint VAO;
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO);
@@ -235,7 +240,7 @@ internal void
 sh_glRender(win32windowdata *WindowData, HWND WindowHandle, glrenderdata *RenderData, MemoryArena *Memory)
 {
     HDC WindowDC = GetDC(WindowHandle);
-    glClearColor(0.3f, 0.1f, 1.0f, 1.0f);
+    glClearColor(0.1f, 0.0f, 1.0f, 1.0f);
     glClearDepth(0.0f);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     
@@ -244,9 +249,17 @@ sh_glRender(win32windowdata *WindowData, HWND WindowHandle, glrenderdata *Render
     
     glUniform2fv(RenderData->ScreenSizeID, 1, &WindowSize.x);
     
-    RenderData->ScreenSizeID = 
-        glGetUniformLocation(RenderData->Shaders[BASIC].Shader, "ScreenSize");
+    vec4 CameraInfo = 
+    {
+        RenderData->Cameras[CAMERA_GAME].Position.x - RenderData->Cameras[CAMERA_GAME].Viewport.x, 
+        RenderData->Cameras[CAMERA_GAME].Position.x + RenderData->Cameras[CAMERA_GAME].Viewport.x, 
+        RenderData->Cameras[CAMERA_GAME].Position.y - RenderData->Cameras[CAMERA_GAME].Viewport.y, 
+        RenderData->Cameras[CAMERA_GAME].Position.y + RenderData->Cameras[CAMERA_GAME].Viewport.y
+    };
     
+    RenderData->Cameras[CAMERA_GAME].Matrix = CreateOrthographicMatrix(CameraInfo);
+    
+    glUniformMatrix4fv(RenderData->OrthographicMatrixID, 1, GL_FALSE, (const GLfloat *)&RenderData->Cameras[CAMERA_GAME].Matrix.Elements[0][0]);
     glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(renderertransform) * RenderData->TransformCounter, RenderData->RendererTransforms);
     glDrawArraysInstanced(GL_TRIANGLES, 0, 6, RenderData->TransformCounter);
     SwapBuffers(WindowDC);

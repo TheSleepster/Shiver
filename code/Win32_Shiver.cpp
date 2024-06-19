@@ -318,7 +318,6 @@ WinMain(HINSTANCE hInstance,
             ShiverArray Events = sh_InitArray((void *)&Event, sizeof(fmod_event), 10, &PermanentStorage);
             
             
-            
             GlobalRunning = true;
             while(GlobalRunning)
             {
@@ -331,8 +330,6 @@ WinMain(HINSTANCE hInstance,
                     Game = Win32LoadGameCode(SourceDLLName);
                 }
 #endif
-                
-                
                 MSG Message = {0};
                 while(PeekMessageA(&Message, WindowHandle, 0, 0, PM_REMOVE))
                 {
