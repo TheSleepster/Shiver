@@ -1,441 +1,59 @@
 #include "Intrinsics.h"
 
+// WINDOWS
 #include <windows.h>
 
-#include "FMOD/fmod.h"
-#include "FMOD/fmod_common.h"
-#include "FMOD/fmod_studio.h"
-
+// ENGINE UTILS
 #include "../data/shader/Shiver_SharedShaderHeader.h"
 #include "util/MemoryArena.h"
 #include "util/Math.h"
+#include "util/ShiverArray.h"
 
+// OPENGL
 #include "OpenGL/GLL.h"
-
 #include "OpenGL/glcorearb.h"
 #include "OpenGL/glext.h"
 #include "OpenGL/wglext.h"
 
-#define MAX_TRANSFORMS 10000
-#define ArraySize(Array, Type) (sizeof(Array) / sizeof(Type))
-#define SIMRATE ((1.0f/60.0f)*1000)
-#define STB_IMAGE_IMPLEMENTATION
+// FMOD 
+#include "FMOD/fmod.h"
+#include "FMOD/fmod_common.h"
 
-#include "stbimage/stb_image.h"
+// FMOD STUDIO
+#include "FMOD/fmod_studio.h"
+#include "FMOD/fmod_studio_common.h"
 
+// GAME HEADERS
+#include "Win32_Shiver.h"
+#include "Shiver_Renderer.h"
+
+// CPP FILES FOR UNITY BUILD
 #include "Shiver_Input.cpp"
+#include "Shiver_Renderer.cpp"
 #include "Shiver.cpp"
 
 global_variable bool GlobalRunning;
 
-enum ShaderPrograms
+
+struct FMODEvent
 {
-    BASIC,
-    SHADERCOUNT
+    const char *EventPath;
+    FMOD_STUDIO_EVENTDESCRIPTION *EventDescription;
+    FMOD_STUDIO_EVENTINSTANCE *EventInstance;
 };
 
-enum GlRendererTextures
-{
-    GAME_ATLAS,
-    TEXTURE_COUNT
-};
 
-enum sprites
+internal inline real32 
+dBToVolume(real32 dB)
 {
-    SPRITE_DICE,
-    SPRITE_COUNT
-};
-
-struct win32windowdata
-{
-    ivec4 SizeData;
-};
-
-struct texture2d
-{
-    ivec3 TextureData;
-    GLenum ActiveTexture;
-    char *RawData;
-    
-    GLuint TextureID;
-    
-    FILETIME LastTimeStamp;
-};
-
-struct glshaderprogram
-{
-    GLuint ShaderID;
-    FILETIME LastTimeStamp;
-};
-
-struct shader
-{
-    glshaderprogram VertexShader;
-    glshaderprogram FragmentShader;
-    GLuint Shader;
-};
-
-struct spritedata
-{
-    ivec2 AtlasOffset;
-    ivec2 SpriteSize;
-};
-
-struct glrenderdata
-{
-    uint32 TransformCounter;
-    renderertransform RendererTransforms[MAX_TRANSFORMS];
-    
-    GLuint RendererTransformsSBOID;
-    GLuint ScreenSizeID;
-    GLuint OrthographicMatrixID;
-    
-    texture2d Textures[31];
-    shader Shaders[1];
-    
-    spritedata Sprites[20];
-};
-
-struct win32openglfunctions
-{
-    PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB;
-    PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB;
-    PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT;
-};
-
-internal inline FILETIME
-maxFiletime(FILETIME A, FILETIME B) 
-{
-    if(CompareFileTime(&A, &B) != 0) 
-    {
-        return(A);
-    }
-    return(A);
+    return(powf(10.0f, 0.05f * dB));
 }
 
-internal FILETIME
-Win32GetLastWriteTime(const char *Filename) 
+internal inline real32
+VolumeTodB(real32 Volume)
 {
-    FILETIME LastWriteTime = {};
-    
-    WIN32_FIND_DATA FindData;
-    HANDLE FindHandle = FindFirstFileA(Filename, &FindData);
-    if(FindHandle != INVALID_HANDLE_VALUE) 
-    {
-        LastWriteTime = FindData.ftLastWriteTime;
-        FindClose(FindHandle);
-    }
-    
-    return(LastWriteTime);
+    return(20 * log10f(Volume));
 }
-
-internal int32
-GetFileSizeInBytes(const char *Filepath) 
-{
-    int32 FileSize = 0;
-    FILE *File = fopen(Filepath, "rb");
-    
-    fseek(File, 0, SEEK_END);
-    FileSize = ftell(File);
-    fseek(File, 0, SEEK_SET);
-    fclose(File);
-    
-    return(FileSize);
-}
-
-internal char *
-ReadEntireFile(const char *Filepath, uint32 *Size, char *Buffer) 
-{
-    Assert(Filepath != nullptr, "Cannot find the file designated!\n");
-    Assert(Buffer != nullptr, "Provide a valid buffer!\n");
-    Assert(Size >= 0, "Size is less than 0!\n");
-    
-    *Size = 0;
-    FILE *File = fopen(Filepath, "rb");
-    
-    fseek(File, 0, SEEK_END);
-    *Size = ftell(File);
-    fseek(File, 0, SEEK_SET);
-    
-    memset(Buffer, 0, *Size + 1);
-    fread(Buffer, sizeof(char), *Size, File);
-    
-    fclose(File);
-    return(Buffer);
-}
-
-internal char *
-ReadEntireFileMA(const char *Filepath, uint32 *FileSize, MemoryArena *ArenaAllocator) 
-{
-    char *File = nullptr; 
-    int32 FileSize2 = GetFileSizeInBytes(Filepath);
-    Assert(FileSize2 >= 0, "FileSize is less than 0!\n");
-    
-    char *Buffer = BumpAllocate(ArenaAllocator, size_t(FileSize2 + 1));
-    File = ReadEntireFile(Filepath, FileSize, Buffer);
-    
-    return(File);
-}
-
-// OPENGL STUFF
-
-internal void APIENTRY
-OpenGLDebugMessageCallback(GLenum Source, GLenum Type, GLuint ID, GLenum Severity,
-                           GLsizei Length, const GLchar *Message, const void *UserParam)
-{
-    if(Severity == GL_DEBUG_SEVERITY_LOW||
-       Severity == GL_DEBUG_SEVERITY_MEDIUM||
-       Severity == GL_DEBUG_SEVERITY_HIGH)
-    {
-        print_m("Error: %s\n", Message);
-        Assert(false, "STOPPING\n");
-    }
-    else
-    {
-        print_m("Warning: %s\n", Message);
-    }
-}
-
-internal void
-sh_glVerifyivSuccess(GLuint TestID, GLuint Type)
-{
-    bool32 Success = {};
-    char ShaderLog[512] = {};
-    
-    switch(Type)
-    {
-        case GL_VERTEX_SHADER:
-        case GL_FRAGMENT_SHADER:
-        {
-            glGetShaderiv(TestID, GL_COMPILE_STATUS, &Success);
-        }break;
-        case GL_PROGRAM:
-        {
-            glGetProgramiv(TestID, GL_LINK_STATUS, &Success);
-        }break;
-    }
-    if(!Success)
-    {
-        glGetShaderInfoLog(TestID, 512, 0, ShaderLog);
-        print_m("ERROR ON SHADER: %s\n", ShaderLog);
-        Assert(false, "STOPPING\n");
-    }
-}
-
-internal void
-sh_glCreateAndLoadTexture(const char *Filepath, texture2d TextureInfo)
-{
-    glActiveTexture(TextureInfo.ActiveTexture);
-    TextureInfo.RawData = 
-    (char *)stbi_load(Filepath, &TextureInfo.TextureData.Width, &TextureInfo.TextureData.Height, &TextureInfo.TextureData.Channels, 4);
-    
-    if(TextureInfo.RawData)
-    {
-        TextureInfo.LastTimeStamp = Win32GetLastWriteTime(Filepath);
-        
-        glGenTextures(0, &TextureInfo.TextureID);
-        
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, 
-                     TextureInfo.TextureData.Width, TextureInfo.TextureData.Height, 0, 
-                     GL_RGBA, GL_UNSIGNED_BYTE, TextureInfo.RawData);
-    }
-    stbi_image_free(TextureInfo.RawData);
-}
-
-internal glshaderprogram
-sh_glCreateShader(int32 ShaderType, const char *Filepath, MemoryArena *Memory)
-{
-    uint32 FileSize = 0;
-    glshaderprogram ReturnShader = {};
-    
-    char *ShaderHeader = ReadEntireFileMA("shader/Shiver_SharedShaderHeader.h", &FileSize, Memory);
-    char *ShaderSource = ReadEntireFileMA(Filepath, &FileSize, Memory);
-    if(ShaderSource && ShaderHeader)
-    {
-        char *ShaderSources[] = 
-        {
-            "#version 430 core\n",
-            ShaderHeader,
-            ShaderSource
-        };
-        
-        ReturnShader.ShaderID = glCreateShader(ShaderType);
-        glShaderSource(ReturnShader.ShaderID, ArraySize(ShaderSources, char *), ShaderSources, 0);
-        glCompileShader(ReturnShader.ShaderID);
-        sh_glVerifyivSuccess(ReturnShader.ShaderID, GL_VERTEX_SHADER);
-        
-        ReturnShader.LastTimeStamp = Win32GetLastWriteTime(Filepath);
-    }
-    else
-    {
-        Trace("File is either not found or does not contain strings!\n");
-        Assert(false, "STOPPING\n");
-    }
-    return(ReturnShader);
-}
-
-internal shader
-sh_glCreateProgram(glshaderprogram VertexShaderID, glshaderprogram FragmentShaderID)
-{
-    shader ReturnProgram;
-    ReturnProgram.Shader = glCreateProgram();
-    
-    glAttachShader(ReturnProgram.Shader, VertexShaderID.ShaderID);
-    glAttachShader(ReturnProgram.Shader, FragmentShaderID.ShaderID);
-    glLinkProgram(ReturnProgram.Shader);
-    
-    sh_glVerifyivSuccess(ReturnProgram.Shader, GL_PROGRAM);
-    
-    glDetachShader(ReturnProgram.Shader, VertexShaderID.ShaderID);
-    glDetachShader(ReturnProgram.Shader, FragmentShaderID.ShaderID);
-    glDeleteShader(VertexShaderID.ShaderID);
-    glDeleteShader(FragmentShaderID.ShaderID);
-    
-    return(ReturnProgram);
-}
-
-internal inline void
-sh_glCreateStaticSprite2D(ivec2 AtlasOffset, ivec2 SpriteSize, 
-                          sprites SpriteID, glrenderdata *RenderData)
-{
-    spritedata Result = {};
-    
-    Result.AtlasOffset = AtlasOffset;
-    Result.SpriteSize = SpriteSize;
-    
-    RenderData->Sprites[SpriteID] = Result;
-}
-
-internal inline spritedata
-sh_glGetSprite(sprites SpriteID, glrenderdata *RenderData)
-{
-    spritedata Result = RenderData->Sprites[SpriteID];
-    return(Result);
-}
-
-internal void
-Win32InitializeOpenGLFunctionPointers(WNDCLASS Window, HINSTANCE hInstance, 
-                                      win32openglfunctions *WGLFunctions)
-{
-    HWND DummyWindow = 
-        CreateWindow(Window.lpszClassName,
-                     "OpenGLFunctionGetter",
-                     WS_OVERLAPPEDWINDOW,
-                     CW_USEDEFAULT,
-                     CW_USEDEFAULT,
-                     CW_USEDEFAULT,
-                     CW_USEDEFAULT,
-                     0,
-                     0,
-                     hInstance,
-                     0);
-    HDC DummyContext = GetDC(DummyWindow);
-    
-    PIXELFORMATDESCRIPTOR DFormat = {};
-    DFormat.nSize = sizeof(DFormat);
-    DFormat.nVersion = 1;
-    DFormat.dwFlags = PFD_DRAW_TO_WINDOW|PFD_SUPPORT_OPENGL|PFD_DOUBLEBUFFER;
-    DFormat.iPixelType = PFD_TYPE_RGBA;
-    DFormat.cColorBits = 32;
-    DFormat.cAlphaBits = 8;
-    DFormat.cDepthBits = 24;
-    
-    int32 dPixelFormat = ChoosePixelFormat(DummyContext, &DFormat);
-    PIXELFORMATDESCRIPTOR DSuggestedFormat;
-    DescribePixelFormat(DummyContext, dPixelFormat, sizeof(DSuggestedFormat), &DSuggestedFormat);
-    SetPixelFormat(DummyContext, dPixelFormat,  &DSuggestedFormat);
-    
-    HGLRC TempRC = wglCreateContext(DummyContext);
-    wglMakeCurrent(DummyContext, TempRC);
-    
-    WGLFunctions->wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)
-        wglGetProcAddress("wglChoosePixelFormatARB");
-    WGLFunctions->wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)
-        wglGetProcAddress("wglCreateContextAttribsARB");
-    WGLFunctions->wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)
-        wglGetProcAddress("wglSwapIntervalEXT");
-    if(!WGLFunctions->wglChoosePixelFormatARB||
-       !WGLFunctions->wglCreateContextAttribsARB||
-       !WGLFunctions->wglSwapIntervalEXT)
-    {
-        Assert(false, "Failed to extract OpenGL function Pointers!\n");
-    }
-    
-    wglMakeCurrent(DummyContext, 0);
-    wglDeleteContext(TempRC);
-    ReleaseDC(DummyWindow, DummyContext);
-    DestroyWindow(DummyWindow);
-}
-
-internal void
-InitializeOpenGLRendererData(glrenderdata *RenderData, MemoryArena *TransientStorage)
-{
-    LoadOpenGLFunctions();
-    
-    glDebugMessageCallback(&OpenGLDebugMessageCallback, nullptr);
-    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-    glEnable(GL_DEBUG_OUTPUT);
-    
-    // Shader Setup
-    {
-        RenderData->Shaders[BASIC].VertexShader = 
-            sh_glCreateShader(GL_VERTEX_SHADER, "shader/Basic.vert", TransientStorage);
-        
-        RenderData->Shaders[BASIC].FragmentShader = 
-            sh_glCreateShader(GL_FRAGMENT_SHADER, "shader/Basic.frag", TransientStorage);
-        
-        RenderData->Shaders[BASIC] = 
-            sh_glCreateProgram(RenderData->Shaders[BASIC].VertexShader, RenderData->Shaders[BASIC].FragmentShader);
-    }
-    
-    GLuint VAO;
-    glGenVertexArrays(1, &VAO);
-    glBindVertexArray(VAO);
-    
-    glGenBuffers(1, &RenderData->RendererTransformsSBOID);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, RenderData->RendererTransformsSBOID);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(renderertransform) * MAX_TRANSFORMS, 
-                 RenderData->RendererTransforms, GL_DYNAMIC_DRAW);
-    
-    RenderData->Textures[GAME_ATLAS].ActiveTexture = GL_TEXTURE0;
-    sh_glCreateAndLoadTexture("res/textures/TextureAtlas.png", RenderData->Textures[GAME_ATLAS]);
-    
-    glEnable(GL_FRAMEBUFFER_SRGB);
-    glDisable(0x809D); // Disabling multisampling
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_GREATER);
-    
-    glUseProgram(RenderData->Shaders[BASIC].Shader);
-}
-
-internal void
-sh_glRender(win32windowdata *WindowData, HWND WindowHandle, glrenderdata *RenderData, MemoryArena *Memory)
-{
-    HDC WindowDC = GetDC(WindowHandle);
-    glClearColor(0.3f, 0.1f, 1.0f, 1.0f);
-    glClearDepth(0.0f);
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-    
-    vec2 WindowSize = {(real32)WindowData->SizeData.Width, (real32)WindowData->SizeData.Height};
-    glViewport(0, 0, WindowData->SizeData.Width, WindowData->SizeData.Height);
-    
-    glUniform2fv(RenderData->ScreenSizeID, 1, &WindowSize.x);
-    
-    RenderData->ScreenSizeID = 
-        glGetUniformLocation(RenderData->Shaders[BASIC].Shader, "ScreenSize");
-    
-    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(renderertransform) * RenderData->TransformCounter, RenderData->RendererTransforms);
-    glDrawArraysInstanced(GL_TRIANGLES, 0, 6, RenderData->TransformCounter);
-    SwapBuffers(WindowDC);
-}
-
-
-// END OF OPENGL
 
 LRESULT CALLBACK 
 Win32MainWindowCallback(HWND WindowHandle, UINT Message,
@@ -445,6 +63,10 @@ Win32MainWindowCallback(HWND WindowHandle, UINT Message,
     
     switch(Message)
     {
+        case WM_CLOSE:
+        {
+            PostQuitMessage(0);
+        }
         case WM_DESTROY:
         {
             DestroyWindow(WindowHandle);
@@ -455,7 +77,6 @@ Win32MainWindowCallback(HWND WindowHandle, UINT Message,
             Result = DefWindowProc(WindowHandle, Message, wParam, lParam);
         };
     }
-    
     return(Result);
 }
 
@@ -558,7 +179,36 @@ WinMain(HINSTANCE hInstance,
             WGLFunctions.wglSwapIntervalEXT(0);
             // VSYNC
             
+            
             InitializeOpenGLRendererData(&RenderData, &TransientStorage);
+            
+            
+            // SOUND
+            FMOD_SYSTEM *System;
+            FMOD_System_Create(&System, FMOD_VERSION);
+            
+            int32 Test = 10;
+            int64 Test2 = 20;
+            ShiverArray TestArray = sh_InitArray((void *)&Test, sizeof(Test), 10, &PermanentStorage);
+            ShiverArray TestArray2 = sh_InitArray((void *)&Test2, sizeof(Test2), 10, &PermanentStorage);
+            
+            // TODO(Sleepster): Fix this, currently doesn't work.
+            //                  C++ Style array would be great
+            int32 Test3 = (int32)TestArray.Data[3];
+            
+            size_t SizeOfTest1 = sizeof(&TestArray.Data);
+            size_t SizeOfTest2 = sizeof(&TestArray2.Data);
+            
+            sh_ArrayAdd(&TestArray, (char *)&Test);
+            int32 Test4 = TestArray.Data[0];
+            
+            sh_ClearArrayData(&TestArray);
+            if(sh_IsIndexNull(&TestArray, 0))
+            {
+                sh_DeleteArray(&TestArray, &PermanentStorage);
+            }
+            
+            //FMODEvent Events[3];
             
             GlobalRunning = true;
             while(GlobalRunning)
@@ -575,10 +225,48 @@ WinMain(HINSTANCE hInstance,
                             WindowData.SizeData.Width = Rect.right - Rect.left;
                             WindowData.SizeData.Height = Rect.top - Rect.bottom;
                         }break;
-                        case WM_CLOSE:
+                        
+                        case WM_SYSKEYDOWN:
+                        case WM_SYSKEYUP:
+                        case WM_KEYDOWN: 
+                        case WM_KEYUP:
                         {
-                            PostQuitMessage(0);
-                        }
+                            uint32 VKCode = (uint32)Message.wParam;
+                            bool WasDown = ((Message.lParam & (1 << 30)) != 0);
+                            bool IsDown = ((Message.lParam & (1 << 31)) == 0);
+                            
+                            KeyCodeID KeyCode = State.KeyCodeLookup[Message.wParam];
+                            Key *Key = &State.GameInput.Keyboard.Keys[KeyCode];
+                            Key->JustPressed = !Key->JustPressed && !Key->IsDown && IsDown;
+                            Key->JustReleased = !Key->JustReleased && Key->IsDown && !IsDown;
+                            Key->IsDown = IsDown;
+                            
+                            
+                            bool AltKeyIsDown = ((Message.lParam & (1 << 29)) !=0);
+                            if(VKCode == VK_F4 && AltKeyIsDown) 
+                            {
+                                GlobalRunning = false;
+                            }
+                        }break;
+                        case WM_LBUTTONDOWN:
+                        case WM_RBUTTONDOWN:
+                        case WM_MBUTTONDOWN:
+                        case WM_XBUTTONDOWN:
+                        case WM_LBUTTONUP:
+                        case WM_RBUTTONUP:
+                        case WM_MBUTTONUP: 
+                        case WM_XBUTTONUP:
+                        {
+                            uint32 VKCode = (uint32)Message.wParam;
+                            bool IsDown = (GetKeyState(VKCode) & (1 << 15));
+                            
+                            KeyCodeID KeyCode = State.KeyCodeLookup[Message.wParam];
+                            Key *Key = &State.GameInput.Keyboard.Keys[KeyCode];
+                            Key->JustPressed = !Key->JustPressed && !Key->IsDown && IsDown;
+                            Key->JustReleased = !Key->JustReleased && Key->IsDown && !IsDown;
+                            Key->IsDown = IsDown;
+                        }break;
+                        
                         default:
                         {
                             TranslateMessage(&Message);
@@ -597,19 +285,8 @@ WinMain(HINSTANCE hInstance,
                     real32 InterpolationDelta = SimulationDelta / SIMRATE;
                 }
                 
-                sh_glCreateStaticSprite2D({0, 0}, {16, 16}, SPRITE_DICE, &RenderData);
-                
-                renderertransform Transform  = {};
-                spritedata SpriteInformation = sh_glGetSprite(SPRITE_DICE, &RenderData);
-                Transform.AtlasOffset = SpriteInformation.AtlasOffset;
-                Transform.SpriteSize = SpriteInformation.SpriteSize;
-                Transform.WorldPosition = {100.0f, 100.0f};
-                Transform.Size = {100.0f, 100.0f};
-                RenderData.RendererTransforms[RenderData.TransformCounter++] = Transform;
-                
-                
+                GameUpdateAndRender(&RenderData);
                 sh_glRender(&WindowData, WindowHandle, &RenderData, &TransientStorage);
-                
                 
                 RenderData.TransformCounter = 0;
                 TransientStorage.Used = 0;

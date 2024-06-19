@@ -1,8 +1,7 @@
 #pragma once
 #include "../Intrinsics.h"
 
-// NOTE : Arena allocator
-
+// NOTE(Sleepster): Still have no idea if this freelist Idea actually works
 struct FreeList 
 {
     struct FreeList *NextChunk;
@@ -32,7 +31,7 @@ MakeMemoryArena(size_t Size)
 }
 
 internal inline char *
-BumpAllocate(MemoryArena *MemoryArena, size_t Size) 
+ArenaAlloc(MemoryArena *MemoryArena, size_t Size) 
 {
     char *Result = nullptr;
     size_t AllignedSize = (Size + 7) & ~ 7;
@@ -53,7 +52,7 @@ BumpAllocate(MemoryArena *MemoryArena, size_t Size)
 }
 
 internal inline void
-BumpDeallocate(MemoryArena *MemoryArena, void *Data) 
+ArenaDealloc(MemoryArena *MemoryArena, void *Data) 
 {
     FreeList *FreeList = (struct FreeList *)Data;
     FreeList->NextChunk = MemoryArena->FreeList;
@@ -61,14 +60,14 @@ BumpDeallocate(MemoryArena *MemoryArena, void *Data)
 }
 
 internal inline void 
-BumpReset(MemoryArena *MemoryArena) 
+ArenaReset(MemoryArena *MemoryArena) 
 {
     MemoryArena->Used = 0;
     MemoryArena->FreeList = 0;
 }
 
 internal inline void 
-BumpDestroy(MemoryArena *MemoryArena) 
+ArenaDestroy(MemoryArena *MemoryArena) 
 {
     free(MemoryArena);
     MemoryArena = nullptr;

@@ -9,6 +9,7 @@
 struct gamestate
 {
     KeyCodeID KeyCodeLookup[KEY_COUNT];
+    Input GameInput;
 };
 
 
