@@ -4,6 +4,7 @@
 #define _SHIVER__INPUT_H
 
 #include "Intrinsics.h"
+#include "util/Math.h"
 
 enum KeyCodeID 
 { 

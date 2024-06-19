@@ -8,6 +8,10 @@
 #include "OpenGL/glext.h"
 #include "OpenGL/wglext.h"
 
+// STB IMAGE TEXTURE LOADING
+#define STB_IMAGE_IMPLEMENTATION
+#include "stbimage/stb_image.h"
+
 // GAME HEADERS
 #include "Win32_Shiver.h"
 #include "Shiver_Renderer.h"
@@ -130,25 +134,6 @@ sh_glCreateProgram(glshaderprogram VertexShaderID, glshaderprogram FragmentShade
     glDeleteShader(FragmentShaderID.ShaderID);
     
     return(ReturnProgram);
-}
-
-internal inline void
-sh_glCreateStaticSprite2D(ivec2 AtlasOffset, ivec2 SpriteSize, 
-                          sprites SpriteID, glrenderdata *RenderData)
-{
-    spritedata Result = {};
-    
-    Result.AtlasOffset = AtlasOffset;
-    Result.SpriteSize = SpriteSize;
-    
-    RenderData->Sprites[SpriteID] = Result;
-}
-
-internal inline spritedata
-sh_glGetSprite(sprites SpriteID, glrenderdata *RenderData)
-{
-    spritedata Result = RenderData->Sprites[SpriteID];
-    return(Result);
 }
 
 internal void

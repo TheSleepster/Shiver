@@ -30,18 +30,8 @@
 // CPP FILES FOR UNITY BUILD
 #include "Shiver_Input.cpp"
 #include "Shiver_Renderer.cpp"
-#include "Shiver.cpp"
 
 global_variable bool GlobalRunning;
-
-
-struct FMODEvent
-{
-    const char *EventPath;
-    FMOD_STUDIO_EVENTDESCRIPTION *EventDescription;
-    FMOD_STUDIO_EVENTINSTANCE *EventInstance;
-};
-
 
 internal inline real32 
 dBToVolume(real32 dB)
@@ -53,6 +43,136 @@ internal inline real32
 VolumeTodB(real32 Volume)
 {
     return(20 * log10f(Volume));
+}
+
+internal inline FILETIME
+Win32MaxFiletime(FILETIME A, FILETIME B) 
+{
+    if(CompareFileTime(&A, &B) != 0) 
+    {
+        return(A);
+    }
+    return(A);
+}
+
+internal FILETIME
+Win32GetLastWriteTime(const char *Filename) 
+{
+    FILETIME LastWriteTime = {};
+    
+    WIN32_FIND_DATA FindData;
+    HANDLE FindHandle = FindFirstFileA(Filename, &FindData);
+    if(FindHandle != INVALID_HANDLE_VALUE) 
+    {
+        LastWriteTime = FindData.ftLastWriteTime;
+        FindClose(FindHandle);
+    }
+    
+    return(LastWriteTime);
+}
+
+// TODO(Sleepster): GetFileSizeInBytes/ReadEntireFile(MA) are platform agnostic
+//                  Move them to seperate files later. Doesn't matter rn
+internal int32
+GetFileSizeInBytes(const char *Filepath) 
+{
+    int32 FileSize = 0;
+    FILE *File = fopen(Filepath, "rb");
+    
+    fseek(File, 0, SEEK_END);
+    FileSize = ftell(File);
+    fseek(File, 0, SEEK_SET);
+    fclose(File);
+    
+    return(FileSize);
+}
+
+internal char *
+ReadEntireFile(const char *Filepath, uint32 *Size, char *Buffer) 
+{
+    Assert(Filepath != nullptr, "Cannot find the file designated!\n");
+    Assert(Buffer != nullptr, "Provide a valid buffer!\n");
+    Assert(Size >= 0, "Size is less than 0!\n");
+    
+    *Size = 0;
+    FILE *File = fopen(Filepath, "rb");
+    
+    fseek(File, 0, SEEK_END);
+    *Size = ftell(File);
+    fseek(File, 0, SEEK_SET);
+    
+    memset(Buffer, 0, *Size + 1);
+    fread(Buffer, sizeof(char), *Size, File);
+    
+    fclose(File);
+    return(Buffer);
+}
+
+internal char *
+ReadEntireFileMA(const char *Filepath, uint32 *FileSize, MemoryArena *ArenaAllocator) 
+{
+    char *File = nullptr; 
+    int32 FileSize2 = GetFileSizeInBytes(Filepath);
+    Assert(FileSize2 >= 0, "FileSize is less than 0!\n");
+    
+    char *Buffer = ArenaAlloc(ArenaAllocator, size_t(FileSize2 + 1));
+    File = ReadEntireFile(Filepath, FileSize, Buffer);
+    
+    return(File);
+}
+
+// HOT RELOADING CODE
+
+struct win32gamecode
+{
+    HMODULE GameCodeDLL;
+    FILETIME LastWriteTime;
+    
+    game_update_and_render *UpdateAndRender;
+    
+    bool IsValid;
+    bool IsLoaded;
+};
+
+internal win32gamecode
+Win32LoadGameCode(const char *SourceDLLName)
+{
+    win32gamecode Result = {};
+    
+    char *TempDLLName = "Temp.dll";
+    Result.LastWriteTime = Win32GetLastWriteTime(SourceDLLName);
+    
+    Result.IsLoaded = 0;
+    while(!Result.IsLoaded)
+    {
+        CopyFile(SourceDLLName, TempDLLName, FALSE);
+        Result.IsLoaded = true;
+    }
+    Result.GameCodeDLL = LoadLibraryA(TempDLLName);
+    if(Result.GameCodeDLL)
+    {
+        Result.UpdateAndRender = (game_update_and_render *)
+            GetProcAddress(Result.GameCodeDLL, "GameUpdateAndRender");
+    }
+    else
+    {
+        Result.UpdateAndRender = GameUpdateAndRenderStub;
+    }
+    Sleep(100);
+    return(Result);
+}
+
+internal void
+Win32UnloadGameCode(win32gamecode *GameCode)
+{
+    if(GameCode->GameCodeDLL)
+    {
+        FreeLibrary(GameCode->GameCodeDLL);
+        GameCode->GameCodeDLL = 0;
+    }
+    GameCode->IsValid = 0;
+    GameCode->IsLoaded = 0;
+    GameCode->UpdateAndRender = GameUpdateAndRenderStub;
 }
 
 LRESULT CALLBACK 
@@ -181,38 +301,38 @@ WinMain(HINSTANCE hInstance,
             
             
             InitializeOpenGLRendererData(&RenderData, &TransientStorage);
-            
+            win32gamecode Game = Win32LoadGameCode("ShiverGame.dll");
             
             // SOUND
             FMOD_SYSTEM *System;
             FMOD_System_Create(&System, FMOD_VERSION);
             
-            int32 Test = 10;
-            int64 Test2 = 20;
-            ShiverArray TestArray = sh_InitArray((void *)&Test, sizeof(Test), 10, &PermanentStorage);
-            ShiverArray TestArray2 = sh_InitArray((void *)&Test2, sizeof(Test2), 10, &PermanentStorage);
-            
-            // TODO(Sleepster): Fix this, currently doesn't work.
-            //                  C++ Style array would be great
-            int32 Test3 = (int32)TestArray.Data[3];
-            
-            size_t SizeOfTest1 = sizeof(&TestArray.Data);
-            size_t SizeOfTest2 = sizeof(&TestArray2.Data);
-            
-            sh_ArrayAdd(&TestArray, (char *)&Test);
-            int32 Test4 = TestArray.Data[0];
-            
-            sh_ClearArrayData(&TestArray);
-            if(sh_IsIndexNull(&TestArray, 0))
+            struct fmod_event
             {
-                sh_DeleteArray(&TestArray, &PermanentStorage);
-            }
+                const char *EventPath;
+                FMOD_STUDIO_EVENTDESCRIPTION *EventDescription;
+                FMOD_STUDIO_EVENTINSTANCE *EventInstance;
+            };
             
-            //FMODEvent Events[3];
+            fmod_event Event = {};
+            ShiverArray Events = sh_InitArray((void *)&Event, sizeof(fmod_event), 10, &PermanentStorage);
+            
+            
             
             GlobalRunning = true;
             while(GlobalRunning)
             {
+#if SHIVER_SLOW
+                const char *SourceDLLName = "ShiverGame.dll";
+                FILETIME NewDLLWriteTime = Win32GetLastWriteTime(SourceDLLName);
+                if(CompareFileTime(&NewDLLWriteTime, &Game.LastWriteTime) != 0)
+                {
+                    Win32UnloadGameCode(&Game);
+                    Game = Win32LoadGameCode(SourceDLLName);
+                }
+#endif
+                
+                
                 MSG Message = {0};
                 while(PeekMessageA(&Message, WindowHandle, 0, 0, PM_REMOVE))
                 {
@@ -285,7 +405,7 @@ WinMain(HINSTANCE hInstance,
                     real32 InterpolationDelta = SimulationDelta / SIMRATE;
                 }
                 
-                GameUpdateAndRender(&RenderData);
+                Game.UpdateAndRender(&State, &RenderData);
                 sh_glRender(&WindowData, WindowHandle, &RenderData, &TransientStorage);
                 
                 RenderData.TransformCounter = 0;

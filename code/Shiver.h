@@ -5,6 +5,7 @@
 
 #include "Intrinsics.h"
 #include "Shiver_Input.h"
+#include "Shiver_Renderer.h"
 
 struct gamestate
 {
@@ -12,5 +13,10 @@ struct gamestate
     Input GameInput;
 };
 
+#define GAME_UPDATE_AND_RENDER(name) void name(gamestate *State, glrenderdata *RenderData)
+typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
+GAME_UPDATE_AND_RENDER(GameUpdateAndRenderStub)
+{
+}
 
 #endif //_SHIVER_H
