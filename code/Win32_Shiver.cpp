@@ -33,6 +33,29 @@
 
 global_variable bool GlobalRunning;
 
+
+struct fmod_sound_subsystem_data
+{
+    FMOD_STUDIO_SYSTEM *StudioSystem;
+    FMOD_SYSTEM *CoreSystem;
+    
+    FMOD_STUDIO_BANK *MasterBank;
+    FMOD_STUDIO_BANK *MasterStringsBank;
+    
+    const char *MasterBankFilepath;
+    const char *StringsBankFilepath;
+    
+    FILETIME MasterBankLastWriteTime;
+    FILETIME StringsBankLastWriteTime;
+};
+
+struct fmod_sound_event
+{
+    FMOD_STUDIO_EVENTDESCRIPTION *EventDesc;
+    FMOD_STUDIO_EVENTINSTANCE *EventInstance;
+};
+
+
 internal inline real32 
 dBToVolume(real32 dB)
 {
@@ -158,7 +181,7 @@ Win32LoadGameCode(const char *SourceDLLName)
     {
         Result.UpdateAndRender = GameUpdateAndRenderStub;
     }
-    Sleep(100);
+    Sleep(200);
     return(Result);
 }
 
@@ -303,31 +326,74 @@ WinMain(HINSTANCE hInstance,
             InitializeOpenGLRendererData(&RenderData, &TransientStorage);
             win32gamecode Game = Win32LoadGameCode("ShiverGame.dll");
             
+            
             // SOUND
-            FMOD_SYSTEM *System;
-            FMOD_System_Create(&System, FMOD_VERSION);
             
-            struct fmod_event
-            {
-                const char *EventPath;
-                FMOD_STUDIO_EVENTDESCRIPTION *EventDescription;
-                FMOD_STUDIO_EVENTINSTANCE *EventInstance;
-            };
             
-            fmod_event Event = {};
-            ShiverArray Events = sh_InitArray((void *)&Event, sizeof(fmod_event), 10, &PermanentStorage);
+            fmod_sound_subsystem_data FMODSubsystemData;
+            fmod_sound_event TestEvent = {};
             
+            FMOD_Studio_System_Create(&FMODSubsystemData.StudioSystem, FMOD_VERSION);
+            // NOTE(Sleepster): We only need to gather the core system if we want to assign changes to it
+            FMOD_Studio_System_GetCoreSystem(FMODSubsystemData.StudioSystem, &FMODSubsystemData.CoreSystem);
+            FMOD_System_SetSoftwareFormat(FMODSubsystemData.CoreSystem, 48000, FMOD_SPEAKERMODE_STEREO, 0);
+            
+            FMOD_Studio_System_Initialize(FMODSubsystemData.StudioSystem, 512, FMOD_STUDIO_INIT_NORMAL, FMOD_INIT_NORMAL, 0);
+            
+            FMODSubsystemData.MasterBankFilepath = "res/sounds/Desktop/Master.bank";
+            FMODSubsystemData.StringsBankFilepath = "res/sounds/Desktop/Master.strings.bank";
+            
+            FMODSubsystemData.MasterBankLastWriteTime = Win32GetLastWriteTime(FMODSubsystemData.MasterBankFilepath);
+            FMODSubsystemData.StringsBankLastWriteTime = Win32GetLastWriteTime(FMODSubsystemData.StringsBankFilepath);
+            
+            FMOD_Studio_System_LoadBankFile(FMODSubsystemData.StudioSystem, FMODSubsystemData.MasterBankFilepath, 
+                                            FMOD_STUDIO_LOAD_BANK_NORMAL, &FMODSubsystemData.MasterBank);
+            
+            FMOD_Studio_System_LoadBankFile(FMODSubsystemData.StudioSystem, FMODSubsystemData.StringsBankFilepath, 
+                                            FMOD_STUDIO_LOAD_BANK_NORMAL, &FMODSubsystemData.MasterStringsBank);
+            
+            FMOD_Studio_System_GetEvent(FMODSubsystemData.StudioSystem, "event:/Test", &TestEvent.EventDesc);
+            FMOD_Studio_EventDescription_CreateInstance(TestEvent.EventDesc, &TestEvent.EventInstance);
+            
+            
+            real32 Accumulator = 0;
+            FMOD_STUDIO_PLAYBACK_STATE FMODSoundState;
             
             GlobalRunning = true;
             while(GlobalRunning)
             {
 #if SHIVER_SLOW
+                // NOTE(Sleepster): HOT RELOADING FOR THE GAME CODE
                 const char *SourceDLLName = "ShiverGame.dll";
                 FILETIME NewDLLWriteTime = Win32GetLastWriteTime(SourceDLLName);
                 if(CompareFileTime(&NewDLLWriteTime, &Game.LastWriteTime) != 0)
                 {
                     Win32UnloadGameCode(&Game);
                     Game = Win32LoadGameCode(SourceDLLName);
+                }
+                
+                // NOTE(Sleepster): HOT RELOADING FMOD SOUND BANKS
+                FILETIME NewMasterBankWriteTime = Win32GetLastWriteTime(FMODSubsystemData.MasterBankFilepath);
+                FILETIME NewStringsBankWriteTime = Win32GetLastWriteTime(FMODSubsystemData.StringsBankFilepath);
+                
+                if(CompareFileTime(&NewMasterBankWriteTime, &FMODSubsystemData.MasterBankLastWriteTime) != 0)
+                {
+                    FMOD_Studio_Bank_Unload(FMODSubsystemData.MasterBank);
+                    FMOD_Studio_System_LoadBankFile(FMODSubsystemData.StudioSystem, FMODSubsystemData.MasterBankFilepath, 
+                                                    FMOD_STUDIO_LOAD_BANK_NORMAL, &FMODSubsystemData.MasterBank);
+                    FMODSubsystemData.MasterBankLastWriteTime = NewMasterBankWriteTime;
+                }
+                
+                if(CompareFileTime(&NewStringsBankWriteTime, &FMODSubsystemData.StringsBankLastWriteTime) != 0)
+                {
+                    FMOD_Studio_Bank_Unload(FMODSubsystemData.MasterStringsBank);
+                    FMOD_Studio_System_LoadBankFile(FMODSubsystemData.StudioSystem, FMODSubsystemData.StringsBankFilepath, 
+                                                    FMOD_STUDIO_LOAD_BANK_NORMAL, &FMODSubsystemData.MasterStringsBank);
+                    FMODSubsystemData.StringsBankLastWriteTime = NewStringsBankWriteTime;
+                    
+                    FMOD_Studio_EventInstance_Release(TestEvent.EventInstance);
+                    FMOD_Studio_System_GetEvent(FMODSubsystemData.StudioSystem, "event:/Test", &TestEvent.EventDesc);
+                    FMOD_Studio_EventDescription_CreateInstance(TestEvent.EventDesc, &TestEvent.EventInstance);
                 }
 #endif
                 MSG Message = {0};
@@ -395,21 +461,30 @@ WinMain(HINSTANCE hInstance,
                 // DELTA TIME
                 if(SimulationDelta >= SIMRATE)
                 {
-                    if(SimulationDelta >= (SIMRATE*2))
-                    {
-                        SimulationDelta = SIMRATE;
-                    }
+                    Accumulator = SimulationDelta - SIMRATE;
                     real32 InterpolationDelta = SimulationDelta / SIMRATE;
                 }
                 
+                
                 Game.UpdateAndRender(&State, &RenderData);
                 sh_glRender(&WindowData, WindowHandle, &RenderData, &TransientStorage);
+                
+                FMOD_Studio_EventInstance_GetPlaybackState(TestEvent.EventInstance, &FMODSoundState);
+                if(FMODSoundState == FMOD_STUDIO_PLAYBACK_STOPPED)
+                {
+                    FMOD_Studio_EventInstance_Start(TestEvent.EventInstance);
+                }
+                
+                FMOD_System_Update(FMODSubsystemData.CoreSystem);
+                FMOD_Studio_System_Update(FMODSubsystemData.StudioSystem);
+                
                 
                 RenderData.TransformCounter = 0;
                 TransientStorage.Used = 0;
                 
                 LARGE_INTEGER EndCounter;
                 QueryPerformanceCounter(&EndCounter);
+                
                 int64 DeltaCounter = EndCounter.QuadPart - LastCounter.QuadPart;
                 real32 MSPerFrame = (1000 *(real32)DeltaCounter) / real32(PerfCountFrequency);
                 int32 FPS = int32(PerfCountFrequency / DeltaCounter);
