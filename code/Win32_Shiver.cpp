@@ -357,7 +357,6 @@ WinMain(HINSTANCE hInstance,
             
             
             real32 Accumulator = 0;
-            FMOD_STUDIO_PLAYBACK_STATE FMODSoundState;
             
             GlobalRunning = true;
             while(GlobalRunning)
@@ -465,6 +464,7 @@ WinMain(HINSTANCE hInstance,
                     real32 InterpolationDelta = SimulationDelta / SIMRATE;
                 }
                 
+                FMOD_STUDIO_PLAYBACK_STATE FMODSoundState;
                 
                 Game.UpdateAndRender(&State, &RenderData);
                 sh_glRender(&WindowData, WindowHandle, &RenderData, &TransientStorage);
@@ -474,6 +474,7 @@ WinMain(HINSTANCE hInstance,
                 {
                     FMOD_Studio_EventInstance_Start(TestEvent.EventInstance);
                 }
+                
                 
                 FMOD_System_Update(FMODSubsystemData.CoreSystem);
                 FMOD_Studio_System_Update(FMODSubsystemData.StudioSystem);

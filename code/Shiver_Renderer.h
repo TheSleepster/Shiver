@@ -45,16 +45,18 @@ struct texture2d
     ivec3 TextureData;
     GLenum ActiveTexture;
     char *RawData;
+    char *Filepath;
     
     GLuint TextureID;
     
-    FILETIME LastTimeStamp;
+    FILETIME LastWriteTime;
 };
 
 struct glshaderprogram
 {
     GLuint ShaderID;
-    FILETIME LastTimeStamp;
+    char *Filepath;
+    FILETIME LastWriteTime;
 };
 
 struct shader
