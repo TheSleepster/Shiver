@@ -6,6 +6,7 @@
 #include "Intrinsics.h"
 #include "Shiver_Input.h"
 #include "Shiver_Renderer.h"
+#include "Shiver_AudioEngine.h"
 
 struct gamestate
 {
@@ -13,7 +14,7 @@ struct gamestate
     Input GameInput;
 };
 
-#define GAME_UPDATE_AND_RENDER(name) void name(gamestate *State, glrenderdata *RenderData)
+#define GAME_UPDATE_AND_RENDER(name) void name(gamestate *State, glrenderdata *RenderData, fmod_sound_subsystem_data *AudioSubsystem)
 typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
 GAME_UPDATE_AND_RENDER(GameUpdateAndRenderStub)
 {
