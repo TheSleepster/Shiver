@@ -1,3 +1,29 @@
+/*
+    This is not a final layer. (Some) Additional Requirements: 
+
+    COMPLETE
+    - GameInput (Keyboard)
+    - Keymapping?
+    - DeltaTime
+- Audio (DirectSound?, SokolAudio?, Or XAudio?)
+    - Audio Formats (.WAV exclusively?)
+
+    TODO 
+    - Asset Loading (Maybe defer this to the renderer? After all it is the renderer that uses them.)
+    - Fullscreen
+    - Multithreading
+- GameInput(XInput)
+    - File Saving
+    - Game Saving
+    - Sleep/Inactivity Period
+    - GetKeyboardLayout() (For non-standard QWERTY keyboards)
+    - Raw Input (For multiple inputs)
+    - WM_ACTIVATEAPP (For being the inactive window)
+    - ClipCursor(Multi Monitor)
+    - Upload with WebAssembly
+*/
+
+
 // NOTE(Sleepster): If the types look weird check this file. Because they are weird.
 #include "Intrinsics.h"
 

@@ -41,6 +41,9 @@ struct fmod_sound_subsystem_data
     fmod_sound_event SoundFX[255];
 };
 
+
+// NOTE(Sleepster): Determine whether or not this is something I want to keep like this.
+//                  It breaks the barrier betwen "Game/Engine" functionality
 internal inline void
 sh_FMODPlaySoundSFX(fmod_sound_event SoundFX)
 {

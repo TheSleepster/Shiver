@@ -20,6 +20,5 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
     if(!Playing)
     {
         sh_FMODPlaySoundSFX(AudioSubsystem->SoundFX[SFX_TEST]);
-        Playing = 1;
     }
 }

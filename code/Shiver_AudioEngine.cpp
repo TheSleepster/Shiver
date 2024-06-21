@@ -11,6 +11,21 @@
 #include "Win32_Shiver.h"
 #include "Shiver_AudioEngine.h"
 
+/*
+    This is not a final layer. (Some) Additional Requirements: 
+
+    COMPLETE
+    - Basic loading from FMOD Studio
+- Integration with the FMOD Studio API
+- Play sounds through API calls on Events
+
+    TODO 
+    - Audio tracks (Music)
+- A call for a looping sound that's terminated on condition
+
+*/
+
+
 internal void
 sh_InitializeFMODStudioSubsystem(fmod_sound_subsystem_data *FMODSubsystemData)
 {
