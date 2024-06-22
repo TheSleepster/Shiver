@@ -5,14 +5,14 @@
     - GameInput (Keyboard)
     - Keymapping?
     - DeltaTime
-- Audio (DirectSound?, SokolAudio?, Or XAudio?)
+ - Audio (DirectSound?, SokolAudio?, Or XAudio?)
     - Audio Formats (.WAV exclusively?)
 
     TODO 
     - Asset Loading (Maybe defer this to the renderer? After all it is the renderer that uses them.)
     - Fullscreen
     - Multithreading
-- GameInput(XInput)
+ - GameInput(XInput)
     - File Saving
     - Game Saving
     - Sleep/Inactivity Period
@@ -142,17 +142,6 @@ ReadEntireFileMA(const char *Filepath, uint32 *FileSize, MemoryArena *ArenaAlloc
 
 // HOT RELOADING CODE
 
-struct win32gamecode
-{
-    HMODULE GameCodeDLL;
-    FILETIME LastWriteTime;
-    
-    game_update_and_render *UpdateAndRender;
-    
-    bool IsValid;
-    bool IsLoaded;
-};
-
 internal win32gamecode
 Win32LoadGameCode(const char *SourceDLLName)
 {
@@ -170,12 +159,19 @@ Win32LoadGameCode(const char *SourceDLLName)
     Result.GameCodeDLL = LoadLibraryA(TempDLLName);
     if(Result.GameCodeDLL)
     {
-        Result.UpdateAndRender = (game_update_and_render *)
-            GetProcAddress(Result.GameCodeDLL, "GameUpdateAndRender");
+        Result.UnlockedUpdate= (game_update_and_render *)
+            GetProcAddress(Result.GameCodeDLL, "GameUnlockedUpdate");
+        
+        Result.FixedUpdate = (game_fixed_update *)
+            GetProcAddress(Result.GameCodeDLL, "GameFixedUpdate");
+        Result.OnAwake = (game_on_awake *)
+            GetProcAddress(Result.GameCodeDLL, "GameOnAwake");
     }
     else
     {
-        Result.UpdateAndRender = GameUpdateAndRenderStub;
+        Result.UnlockedUpdate = GameUpdateAndRenderStub;
+        Result.FixedUpdate = GameFixedUpdateStub;
+        Result.OnAwake = GameOnAwakeStub;
     }
     Sleep(200);
     return(Result);
@@ -191,7 +187,8 @@ Win32UnloadGameCode(win32gamecode *GameCode)
     }
     GameCode->IsValid = 0;
     GameCode->IsLoaded = 0;
-    GameCode->UpdateAndRender = GameUpdateAndRenderStub;
+    GameCode->UnlockedUpdate = GameUpdateAndRenderStub;
+    GameCode->FixedUpdate = GameFixedUpdateStub;
 }
 
 LRESULT CALLBACK 
@@ -217,6 +214,71 @@ Win32MainWindowCallback(HWND WindowHandle, UINT Message,
         };
     }
     return(Result);
+}
+
+internal void
+Win32ProcessWindowMessages(MSG Message, HWND WindowHandle, win32windowdata *WindowData, gamestate *State)
+{
+    while(PeekMessageA(&Message, WindowHandle, 0, 0, PM_REMOVE))
+    {
+        switch(Message.message)
+        {
+            case WM_SIZE:
+            {
+                RECT Rect  = {};
+                GetClientRect(WindowHandle, &Rect);
+                WindowData->SizeData.Width = Rect.right - Rect.left;
+                WindowData->SizeData.Height = Rect.top - Rect.bottom;
+            }break;
+            
+            case WM_SYSKEYDOWN:
+            case WM_SYSKEYUP:
+            case WM_KEYDOWN: 
+            case WM_KEYUP:
+            {
+                uint32 VKCode = (uint32)Message.wParam;
+                bool WasDown = ((Message.lParam & (1 << 30)) != 0);
+                bool IsDown = ((Message.lParam & (1 << 31)) == 0);
+                
+                KeyCodeID KeyCode = State->KeyCodeLookup[Message.wParam];
+                Key *Key = &State->GameInput.Keyboard.Keys[KeyCode];
+                Key->JustPressed = !Key->JustPressed && !Key->IsDown && IsDown;
+                Key->JustReleased = !Key->JustReleased && Key->IsDown && !IsDown;
+                Key->IsDown = IsDown;
+                
+                
+                bool AltKeyIsDown = ((Message.lParam & (1 << 29)) !=0);
+                if(VKCode == VK_F4 && AltKeyIsDown) 
+                {
+                    GlobalRunning = false;
+                }
+            }break;
+            case WM_LBUTTONDOWN:
+            case WM_RBUTTONDOWN:
+            case WM_MBUTTONDOWN:
+            case WM_XBUTTONDOWN:
+            case WM_LBUTTONUP:
+            case WM_RBUTTONUP:
+            case WM_MBUTTONUP: 
+            case WM_XBUTTONUP:
+            {
+                uint32 VKCode = (uint32)Message.wParam;
+                bool IsDown = (GetKeyState(VKCode) & (1 << 15));
+                
+                KeyCodeID KeyCode = State->KeyCodeLookup[Message.wParam];
+                Key *Key = &State->GameInput.Keyboard.Keys[KeyCode];
+                Key->JustPressed = !Key->JustPressed && !Key->IsDown && IsDown;
+                Key->JustReleased = !Key->JustReleased && Key->IsDown && !IsDown;
+                Key->IsDown = IsDown;
+            }break;
+            
+            default:
+            {
+                TranslateMessage(&Message);
+                DispatchMessage(&Message);
+            }break;
+        }
+    }
 }
 
 int CALLBACK 
@@ -318,28 +380,25 @@ WinMain(HINSTANCE hInstance,
             WGLFunctions.wglSwapIntervalEXT(0);
             // VSYNC
             
-            
             InitializeOpenGLRendererData(&RenderData, &TransientStorage);
             win32gamecode Game = Win32LoadGameCode("ShiverGame.dll");
             
             
             // SOUND
-            
-            
             fmod_sound_subsystem_data FMODSubsystemData;
             fmod_sound_event TestEvent = {};
             
             sh_InitializeFMODStudioSubsystem(&FMODSubsystemData);
             sh_LoadFMODStudioBankData(&FMODSubsystemData, "res/sounds/Desktop/Master.bank", "res/sounds/Desktop/Master.strings.bank");
-            
             sh_FMODStudioLoadSFXData(&FMODSubsystemData, FMODSubsystemData.SoundFX);
-            
-            
             // END OF SOUND
             
             
             real32 Accumulator = 0;
             GlobalRunning = true;
+            
+            Game.OnAwake(&State, &RenderData, &FMODSubsystemData);
+            
             while(GlobalRunning)
             {
 #if SHIVER_SLOW
@@ -350,6 +409,8 @@ WinMain(HINSTANCE hInstance,
                 {
                     Win32UnloadGameCode(&Game);
                     Game = Win32LoadGameCode(SourceDLLName);
+                    
+                    Game.OnAwake(&State, &RenderData, &FMODSubsystemData);
                 }
                 
                 // NOTE(Sleepster): HOT RELOADING FMOD SOUND BANKS
@@ -367,84 +428,31 @@ WinMain(HINSTANCE hInstance,
                 }
 #endif
                 MSG Message = {0};
-                while(PeekMessageA(&Message, WindowHandle, 0, 0, PM_REMOVE))
-                {
-                    switch(Message.message)
-                    {
-                        case WM_SIZE:
-                        {
-                            RECT Rect  = {};
-                            GetClientRect(WindowHandle, &Rect);
-                            WindowData.SizeData.Width = Rect.right - Rect.left;
-                            WindowData.SizeData.Height = Rect.top - Rect.bottom;
-                        }break;
-                        
-                        case WM_SYSKEYDOWN:
-                        case WM_SYSKEYUP:
-                        case WM_KEYDOWN: 
-                        case WM_KEYUP:
-                        {
-                            uint32 VKCode = (uint32)Message.wParam;
-                            bool WasDown = ((Message.lParam & (1 << 30)) != 0);
-                            bool IsDown = ((Message.lParam & (1 << 31)) == 0);
-                            
-                            KeyCodeID KeyCode = State.KeyCodeLookup[Message.wParam];
-                            Key *Key = &State.GameInput.Keyboard.Keys[KeyCode];
-                            Key->JustPressed = !Key->JustPressed && !Key->IsDown && IsDown;
-                            Key->JustReleased = !Key->JustReleased && Key->IsDown && !IsDown;
-                            Key->IsDown = IsDown;
-                            
-                            
-                            bool AltKeyIsDown = ((Message.lParam & (1 << 29)) !=0);
-                            if(VKCode == VK_F4 && AltKeyIsDown) 
-                            {
-                                GlobalRunning = false;
-                            }
-                        }break;
-                        case WM_LBUTTONDOWN:
-                        case WM_RBUTTONDOWN:
-                        case WM_MBUTTONDOWN:
-                        case WM_XBUTTONDOWN:
-                        case WM_LBUTTONUP:
-                        case WM_RBUTTONUP:
-                        case WM_MBUTTONUP: 
-                        case WM_XBUTTONUP:
-                        {
-                            uint32 VKCode = (uint32)Message.wParam;
-                            bool IsDown = (GetKeyState(VKCode) & (1 << 15));
-                            
-                            KeyCodeID KeyCode = State.KeyCodeLookup[Message.wParam];
-                            Key *Key = &State.GameInput.Keyboard.Keys[KeyCode];
-                            Key->JustPressed = !Key->JustPressed && !Key->IsDown && IsDown;
-                            Key->JustReleased = !Key->JustReleased && Key->IsDown && !IsDown;
-                            Key->IsDown = IsDown;
-                        }break;
-                        
-                        default:
-                        {
-                            TranslateMessage(&Message);
-                            DispatchMessage(&Message);
-                        }break;
-                    }
-                }
+                Win32ProcessWindowMessages(Message, WindowHandle, &WindowData, &State);
                 
-                // DELTA TIME
+                // FIXED UPDATE (From DeltaTime)
                 if(SimulationDelta >= SIMRATE)
                 {
                     real32 InterpolationDelta = SimulationDelta / SIMRATE;
+                    
+                    Game.FixedUpdate(&State, &RenderData, InterpolationDelta);
+                    
+                    FMOD_System_Update(FMODSubsystemData.CoreSystem);
+                    FMOD_Studio_System_Update(FMODSubsystemData.StudioSystem);
+                    
                     SimulationDelta = 0;
                 }
                 
-                Game.UpdateAndRender(&State, &RenderData, &FMODSubsystemData);
-                sh_glRender(&WindowData, WindowHandle, &RenderData, &TransientStorage);
                 
-                FMOD_System_Update(FMODSubsystemData.CoreSystem);
-                FMOD_Studio_System_Update(FMODSubsystemData.StudioSystem);
+                // UPDATE GAME (Framerate Independant)
+                Game.UnlockedUpdate(&State, &RenderData, &FMODSubsystemData);
+                sh_glRender(&WindowData, WindowHandle, &RenderData, &TransientStorage);
                 
                 
                 RenderData.TransformCounter = 0;
                 TransientStorage.Used = 0;
                 
+                // UPDATE DELTA TIME
                 LARGE_INTEGER EndCounter;
                 QueryPerformanceCounter(&EndCounter);
                 

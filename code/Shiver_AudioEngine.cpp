@@ -1,16 +1,3 @@
-#include "Intrinsics.h"
-
-#include "FMOD/fmod.h"
-#include "FMOD/fmod_common.h"
-
-// FMOD STUDIO
-#include "FMOD/fmod_studio.h"
-#include "FMOD/fmod_studio_common.h"
-
-// GAME HEADERS
-#include "Win32_Shiver.h"
-#include "Shiver_AudioEngine.h"
-
 /*
     This is not a final layer. (Some) Additional Requirements: 
 
@@ -25,6 +12,19 @@
 
 */
 
+
+#include "Intrinsics.h"
+
+#include "FMOD/fmod.h"
+#include "FMOD/fmod_common.h"
+
+// FMOD STUDIO
+#include "FMOD/fmod_studio.h"
+#include "FMOD/fmod_studio_common.h"
+
+// GAME HEADERS
+#include "Win32_Shiver.h"
+#include "Shiver_AudioEngine.h"
 
 internal void
 sh_InitializeFMODStudioSubsystem(fmod_sound_subsystem_data *FMODSubsystemData)

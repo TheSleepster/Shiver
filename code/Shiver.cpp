@@ -3,22 +3,50 @@
 #include "Shiver_Input.h"
 #include "Shiver_AudioEngine.h"
 
-#define WORLD_WIDTH 160
-#define WORLD_HEIGHT 90
+internal entity
+CreateEntity(sprites SpriteID, vec2 Position, glrenderdata *RenderData)
+{
+    entity Entity = {};
+    sh_glCreateStaticSprite2D({0, 0}, {16, 16}, SpriteID, RenderData);
+    
+    Entity.SpriteID = SpriteID;
+    Entity.Sprite = sh_glGetSprite(SpriteID, RenderData);
+    Entity.Position = Position;
+    
+    return(Entity);
+}
 
-global_variable bool Playing = 0;
+internal inline void
+DrawEntityStaticSprite2D(entity Entity, ivec2 Size, glrenderdata *RenderData)
+{
+    if(Entity.SpriteID != SPRITE_NULL)
+    {
+        sh_glDrawStaticSprite2D(Entity.SpriteID, Entity.Position, Size, RenderData);
+    }
+    return;
+}
+
+internal inline entity
+DeleteEntity(void)
+{
+    entity Entity = {};
+    return(Entity);
+}
 
 extern "C"
-GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
+GAME_ON_AWAKE(GameOnAwake)
 {
-    RenderData->Cameras[CAMERA_GAME].Position = {160, -90};
-    RenderData->Cameras[CAMERA_GAME].Viewport = {WORLD_WIDTH, WORLD_HEIGHT};
-    
-    sh_glCreateStaticSprite2D({0, 0}, {16, 16}, SPRITE_DICE, RenderData);
-    sh_glDrawStaticSprite2D(SPRITE_DICE, {160, 90}, {16, 16}, RenderData);
-    
-    if(!Playing)
-    {
-        sh_FMODPlaySoundSFX(AudioSubsystem->SoundFX[SFX_TEST]);
-    }
+    State->Entities[0] = CreateEntity(SPRITE_DICE, {0, 0}, RenderData);
+    sh_FMODPlaySoundFX(AudioSubsystem->SoundFX[SFX_TEST]);
+}
+
+extern "C"
+GAME_FIXED_UPDATE(GameFixedUpdate)
+{
+}
+
+extern "C"
+GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
+{
+    DrawEntityStaticSprite2D(State->Entities[0], {16, 16}, RenderData);
 }

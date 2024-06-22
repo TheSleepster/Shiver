@@ -25,12 +25,14 @@ enum ShaderPrograms
 
 enum GlRendererTextures
 {
-    GAME_ATLAS,
+    NULL_TEXTURE,
+    TEXTURE_GAME_ATLAS,
     TEXTURE_COUNT
 };
 
 enum sprites
 {
+    SPRITE_NULL,
     SPRITE_DICE,
     SPRITE_COUNT
 };
@@ -106,7 +108,8 @@ struct glrenderdata
 };
 
 internal void 
-sh_glCreateStaticSprite2D(ivec2 AtlasOffset, ivec2 SpriteSize, sprites SpriteID, glrenderdata *RenderData)
+sh_glCreateStaticSprite2D(ivec2 AtlasOffset, ivec2 SpriteSize, 
+                          sprites SpriteID, glrenderdata *RenderData)
 {
     spritedata Result = {};
     
@@ -132,7 +135,7 @@ sh_glDrawStaticSprite2D(sprites SpriteID, vec2 Position, ivec2 Size, glrenderdat
     Transform.AtlasOffset = SpriteData.AtlasOffset;
     Transform.SpriteSize = SpriteData.SpriteSize;
     Transform.Size = v2Cast(Size);
-    Transform.WorldPosition = Position - (Transform.Size / 2.);
+    Transform.WorldPosition = Position - (Transform.Size / 2);
     RenderData->RendererTransforms[RenderData->TransformCounter++] = Transform;
 }
 

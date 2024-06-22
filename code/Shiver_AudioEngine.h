@@ -45,17 +45,11 @@ struct fmod_sound_subsystem_data
 // NOTE(Sleepster): Determine whether or not this is something I want to keep like this.
 //                  It breaks the barrier betwen "Game/Engine" functionality
 internal inline void
-sh_FMODPlaySoundSFX(fmod_sound_event SoundFX)
+sh_FMODPlaySoundFX(fmod_sound_event SoundFX)
 {
-    FMOD_STUDIO_PLAYBACK_STATE FMODSoundState;
-    
     FMOD_Studio_EventDescription_CreateInstance(SoundFX.EventDesc, &SoundFX.EventInstance);
-    FMOD_Studio_EventInstance_GetPlaybackState(SoundFX.EventInstance, &FMODSoundState);
-    if(FMODSoundState == FMOD_STUDIO_PLAYBACK_STOPPED)
-    {
-        FMOD_Studio_EventInstance_Start(SoundFX.EventInstance);
-        FMOD_Studio_EventInstance_Release(SoundFX.EventInstance);
-    }
+    FMOD_Studio_EventInstance_Start(SoundFX.EventInstance);
+    FMOD_Studio_EventInstance_Release(SoundFX.EventInstance);
 }
 
 #endif //_SHIVER__AUDIO_ENGINE_H

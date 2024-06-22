@@ -1,6 +1,7 @@
 #include "../data/shader/Shiver_SharedShaderHeader.h"
 #include "util/MemoryArena.h"
 #include "util/Math.h"
+#include "Shiver.h"
 
 // OPENGL
 #include "OpenGL/GLL.h"
@@ -248,17 +249,20 @@ InitializeOpenGLRendererData(glrenderdata *RenderData, MemoryArena *TransientSto
     glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(renderertransform) * MAX_TRANSFORMS, 
                  RenderData->RendererTransforms, GL_DYNAMIC_DRAW);
     
-    RenderData->Textures[GAME_ATLAS].Filepath = "res/textures/TextureAtlas.png";
-    RenderData->Textures[GAME_ATLAS].ActiveTexture = GL_TEXTURE0;
-    sh_glCreateAndLoadTexture(RenderData->Textures[GAME_ATLAS].Filepath, RenderData->Textures[GAME_ATLAS]);
+    RenderData->Textures[TEXTURE_GAME_ATLAS].Filepath = "res/textures/TextureAtlas.png";
+    RenderData->Textures[TEXTURE_GAME_ATLAS].ActiveTexture = GL_TEXTURE0;
+    sh_glCreateAndLoadTexture(RenderData->Textures[TEXTURE_GAME_ATLAS].Filepath, RenderData->Textures[TEXTURE_GAME_ATLAS]);
     
-    RenderData->Textures[GAME_ATLAS].LastWriteTime = Win32GetLastWriteTime(RenderData->Textures[GAME_ATLAS].Filepath);
+    RenderData->Textures[TEXTURE_GAME_ATLAS].LastWriteTime = Win32GetLastWriteTime(RenderData->Textures[TEXTURE_GAME_ATLAS].Filepath);
     
     RenderData->Shaders[BASIC].VertexShader.LastWriteTime = 
         Win32GetLastWriteTime(RenderData->Shaders[BASIC].VertexShader.Filepath);
     
     RenderData->Shaders[BASIC].FragmentShader.LastWriteTime = 
         Win32GetLastWriteTime(RenderData->Shaders[BASIC].FragmentShader.Filepath);
+    
+    RenderData->Cameras[CAMERA_GAME].Position = {};
+    RenderData->Cameras[CAMERA_GAME].Viewport = {WORLD_WIDTH, WORLD_HEIGHT};
     
     glEnable(GL_FRAMEBUFFER_SRGB);
     glDisable(0x809D); // Disabling multisampling
@@ -272,14 +276,14 @@ internal void
 sh_glRender(win32windowdata *WindowData, HWND WindowHandle, glrenderdata *RenderData, MemoryArena *Memory)
 {
 #if SHIVER_SLOW
-    FILETIME NewTextureWriteTime = Win32GetLastWriteTime(RenderData->Textures[GAME_ATLAS].Filepath);
+    FILETIME NewTextureWriteTime = Win32GetLastWriteTime(RenderData->Textures[TEXTURE_GAME_ATLAS].Filepath);
     FILETIME NewVertexShaderWriteTime = Win32GetLastWriteTime(RenderData->Shaders[BASIC].VertexShader.Filepath);
     FILETIME NewFragmentShaderWriteTime = Win32GetLastWriteTime(RenderData->Shaders[BASIC].FragmentShader.Filepath);
     
-    if(CompareFileTime(&NewTextureWriteTime, &RenderData->Textures[GAME_ATLAS].LastWriteTime) != 0)
+    if(CompareFileTime(&NewTextureWriteTime, &RenderData->Textures[TEXTURE_GAME_ATLAS].LastWriteTime) != 0)
     {
-        sh_glLoadExistingTexture(RenderData->Textures[GAME_ATLAS].Filepath, RenderData->Textures[GAME_ATLAS]);
-        RenderData->Textures[GAME_ATLAS].LastWriteTime = NewTextureWriteTime;
+        sh_glLoadExistingTexture(RenderData->Textures[TEXTURE_GAME_ATLAS].Filepath, RenderData->Textures[TEXTURE_GAME_ATLAS]);
+        RenderData->Textures[TEXTURE_GAME_ATLAS].LastWriteTime = NewTextureWriteTime;
         Sleep(100);
     }
     
