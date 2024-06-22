@@ -50,7 +50,7 @@
 #include "FMOD/fmod_studio.h"
 #include "FMOD/fmod_studio_common.h"
 
-// GAME HEADERS
+// ENGINE HEADERS
 #include "Win32_Shiver.h"
 #include "Shiver_Renderer.h"
 #include "Shiver_AudioEngine.h"

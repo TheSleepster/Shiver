@@ -1,5 +1,6 @@
 @echo off
 REM /Ox /O2 /Ot for release
+REM -Bt+ for timing info
 REM remove -Zi
 
 Set CommonCompilerFlags=-DSHIVER_SLOW=1 -DENGINE=1 -nologo -Fm -GR- -EHa- -Od -Oi -Zi -W4 -wd4189 -wd4200 -wd4996 -wd4706 -wd4530 -wd4100 -wd4201 -wd4505
