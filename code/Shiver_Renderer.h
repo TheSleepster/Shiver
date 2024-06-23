@@ -34,6 +34,8 @@ enum sprites
 {
     SPRITE_NULL,
     SPRITE_DICE,
+    SPRITE_FLOOR,
+    SPRITE_WALL,
     SPRITE_COUNT
 };
 

@@ -5,9 +5,9 @@
 internal void 
 Win32LoadKeyData(gamestate *State) 
 { 
-    State->KeyCodeLookup[VK_LBUTTON] = KEY_MOUSE_LEFT;
-    State->KeyCodeLookup[VK_MBUTTON] = KEY_MOUSE_MIDDLE;
-    State->KeyCodeLookup[VK_RBUTTON] = KEY_MOUSE_RIGHT;
+    State->KeyCodeLookup[VK_LBUTTON] = KEY_LEFT_MOUSE;
+    State->KeyCodeLookup[VK_MBUTTON] = KEY_MIDDLE_MOUSE;
+    State->KeyCodeLookup[VK_RBUTTON] = KEY_RIGHT_MOUSE;
     
     State->KeyCodeLookup['A'] = KEY_A;
     State->KeyCodeLookup['B'] = KEY_B;
@@ -114,4 +114,23 @@ Win32LoadKeyData(gamestate *State)
     State->KeyCodeLookup[VK_NUMPAD7] = KEY_NUMPAD_7;
     State->KeyCodeLookup[VK_NUMPAD8] = KEY_NUMPAD_8;
     State->KeyCodeLookup[VK_NUMPAD9] = KEY_NUMPAD_9;
+}
+
+internal inline Keymapping
+AddKeyBinding(KeyCodeID MainKey, KeyCodeID AltKey)
+{
+    Keymapping Result = {};
+    Result.MainKey = MainKey;
+    Result.AltKey = AltKey;
+    return(Result);
+}
+
+internal void
+Win32LoadDefaultBindings(Input *GameInput)
+{
+    GameInput->Keyboard.Bindings[MOVE_UP] = AddKeyBinding(KEY_W, KEY_UP);
+    GameInput->Keyboard.Bindings[MOVE_DOWN] = AddKeyBinding(KEY_S, KEY_DOWN);
+    GameInput->Keyboard.Bindings[MOVE_LEFT] = AddKeyBinding(KEY_A, KEY_LEFT);
+    GameInput->Keyboard.Bindings[MOVE_RIGHT] = AddKeyBinding(KEY_D, KEY_RIGHT);
+    GameInput->Keyboard.Bindings[ATTACK] = AddKeyBinding(KEY_LEFT_MOUSE, KEY_LEFT_MOUSE);
 }

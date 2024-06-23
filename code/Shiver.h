@@ -11,13 +11,27 @@
 #define WORLD_WIDTH 160
 #define WORLD_HEIGHT 90
 
+enum VertexPositions
+{
+    TOP_LEFT,
+    TOP_RIGHT,
+    BOTTOM_LEFT,
+    BOTTOM_RIGHT
+};
+
+// TODO(Sleepster): Sprite Directions
 struct entity
 {
     sprites SpriteID;
     spritedata Sprite;
     
+    vec2 pPosition;
     vec2 Position;
+    
     vec2 Velocity;
+    vec2 Size;
+    
+    vec2 Vertex[4];
 };
 
 struct gamestate
@@ -29,7 +43,7 @@ struct gamestate
     entity Entities[256];
 };
 
-#define GAME_UPDATE_AND_RENDER(name) void name(gamestate *State, glrenderdata *RenderData, fmod_sound_subsystem_data *AudioSubsystem)
+#define GAME_UPDATE_AND_RENDER(name) void name(gamestate *State, glrenderdata *RenderData, fmod_sound_subsystem_data *AudioSubsystem,  real32 DeltaTime)
 typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
 GAME_UPDATE_AND_RENDER(GameUpdateAndRenderStub)
 {

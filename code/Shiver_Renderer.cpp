@@ -261,7 +261,7 @@ InitializeOpenGLRendererData(glrenderdata *RenderData, MemoryArena *TransientSto
     RenderData->Shaders[BASIC].FragmentShader.LastWriteTime = 
         Win32GetLastWriteTime(RenderData->Shaders[BASIC].FragmentShader.Filepath);
     
-    RenderData->Cameras[CAMERA_GAME].Position = {};
+    RenderData->Cameras[CAMERA_GAME].Position = {160, -90};
     RenderData->Cameras[CAMERA_GAME].Viewport = {WORLD_WIDTH, WORLD_HEIGHT};
     
     glEnable(GL_FRAMEBUFFER_SRGB);

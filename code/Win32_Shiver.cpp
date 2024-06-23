@@ -271,7 +271,6 @@ Win32ProcessWindowMessages(MSG Message, HWND WindowHandle, win32windowdata *Wind
                 Key->JustReleased = !Key->JustReleased && Key->IsDown && !IsDown;
                 Key->IsDown = IsDown;
             }break;
-            
             default:
             {
                 TranslateMessage(&Message);
@@ -294,6 +293,7 @@ WinMain(HINSTANCE hInstance,
     
     gamestate State = {};
     Win32LoadKeyData(&State);
+    Win32LoadDefaultBindings(&State.GameInput);
     
     LARGE_INTEGER PerfCountFrequencyResult;
     QueryPerformanceFrequency(&PerfCountFrequencyResult);
@@ -393,7 +393,6 @@ WinMain(HINSTANCE hInstance,
             sh_FMODStudioLoadSFXData(&FMODSubsystemData, FMODSubsystemData.SoundFX);
             // END OF SOUND
             
-            
             real32 Accumulator = 0;
             GlobalRunning = true;
             
@@ -429,14 +428,13 @@ WinMain(HINSTANCE hInstance,
 #endif
                 MSG Message = {0};
                 Win32ProcessWindowMessages(Message, WindowHandle, &WindowData, &State);
-                
+                real32 InterpolationDelta = {};
                 // FIXED UPDATE (From DeltaTime)
                 if(SimulationDelta >= SIMRATE)
                 {
-                    real32 InterpolationDelta = SimulationDelta / SIMRATE;
+                    InterpolationDelta = SimulationDelta / SIMRATE;
                     
                     Game.FixedUpdate(&State, &RenderData, InterpolationDelta);
-                    
                     FMOD_System_Update(FMODSubsystemData.CoreSystem);
                     FMOD_Studio_System_Update(FMODSubsystemData.StudioSystem);
                     
@@ -445,7 +443,7 @@ WinMain(HINSTANCE hInstance,
                 
                 
                 // UPDATE GAME (Framerate Independant)
-                Game.UnlockedUpdate(&State, &RenderData, &FMODSubsystemData);
+                Game.UnlockedUpdate(&State, &RenderData, &FMODSubsystemData, InterpolationDelta);
                 sh_glRender(&WindowData, WindowHandle, &RenderData, &TransientStorage);
                 
                 

@@ -8,9 +8,10 @@
 
 enum KeyCodeID 
 { 
-    KEY_MOUSE_LEFT,
-    KEY_MOUSE_MIDDLE,
-    KEY_MOUSE_RIGHT,
+    KEY_NONE,
+    KEY_LEFT_MOUSE,
+    KEY_MIDDLE_MOUSE,
+    KEY_RIGHT_MOUSE,
     
     KEY_A, KEY_B, KEY_C, KEY_D, KEY_E, KEY_F, KEY_G, KEY_H, KEY_I, KEY_J,
     KEY_K, KEY_L, KEY_M, KEY_N, KEY_O, KEY_P, KEY_Q, KEY_R, KEY_S, KEY_T,
@@ -74,7 +75,18 @@ enum KeyCodeID
     KEY_NUMPAD_DOT,
     KEY_NUMPAD_SLASH,
     
-    KEY_COUNT = 255,
+    KEY_COUNT = 256,
+};
+
+enum KeyBindings 
+{
+    BINDING_NONE,
+    MOVE_UP,
+    MOVE_DOWN,
+    MOVE_LEFT,
+    MOVE_RIGHT,
+    ATTACK,
+    BINDING_COUNT,
 };
 
 struct Key 
@@ -85,21 +97,10 @@ struct Key
     uint8 HalfTransitionCount;
 };
 
-enum KeyBindings 
+struct Keymapping 
 {
-    MOVE_UP,
-    MOVE_DOWN,
-    MOVE_LEFT,
-    MOVE_RIGHT,
-    
-    ATTACK,
-    
-    BINDING_COUNT,
-};
-
-struct Keymap 
-{
-    KeyCodeID Key;
+    KeyCodeID MainKey;
+    KeyCodeID AltKey;
 };
 
 struct KeyboardInput 
@@ -109,7 +110,7 @@ struct KeyboardInput
     ivec2 RelMouse;
     
     Key Keys[KEY_COUNT];
-    Keymap Bindings[BINDING_COUNT];
+    Keymapping Bindings[BINDING_COUNT];
 };
 
 struct Input 
@@ -131,7 +132,7 @@ IsKeyDown(KeyCodeID KeyCode, Input *GameInput)
 internal inline bool
 IsGameKeyDown(KeyBindings InputType, Input *GameInput) 
 {
-    KeyCodeID Keycode = GameInput->Keyboard.Bindings[InputType].Key;
+    KeyCodeID Keycode = GameInput->Keyboard.Bindings[InputType].MainKey;
     Key Key = GameInput->Keyboard.Keys[Keycode];
     if(Key.IsDown) 
     {
