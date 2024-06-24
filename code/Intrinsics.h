@@ -25,6 +25,7 @@
 #define Megabytes(Value) ((uint64)Kilobytes(Value) * 1024)
 #define Gigabytes(Value) ((uint64)Megabytes(Value) * 1024)
 
+#define ArrayCount(Array) (sizeof(Array) / sizeof(Array[0]))
 
 #include <stdio.h>
 #include <stdint.h>

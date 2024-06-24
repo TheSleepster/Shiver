@@ -149,9 +149,13 @@ v2Normalize(vec2 A)
 { 
     vec2 Result = {};
     real32 Length = v2Length(A);
+    if(Length == 0)
+    {
+        Length = 1;
+    }
+    
     Result.x = A.x / Length;
     Result.y = A.y / Length;
-    
     return(Result);
 }
 
@@ -194,7 +198,7 @@ minf32(real32 a, real32 b)
 internal inline vec2
 v2Perp(vec2 A) 
 {
-    vec2 Result = {A.y, -A.x};
+    vec2 Result = {-A.y, A.x};
     return(Result);
 }
 
@@ -208,7 +212,7 @@ v2Inverse(vec2 A)
 internal inline vec2
 v2Invert(vec2 A) 
 {
-    vec2 Result = {-A.x, -A.y};
+    vec2 Result = {A.x * -1, A.y * -1};
     return(Result);
 }
 

@@ -176,7 +176,7 @@ sh_glCreateShader(int32 ShaderType, char *Filepath, MemoryArena *Memory)
         };
         
         ReturnShader.ShaderID = glCreateShader(ShaderType);
-        glShaderSource(ReturnShader.ShaderID, ArraySize(ShaderSources, char *), ShaderSources, 0);
+        glShaderSource(ReturnShader.ShaderID, ArrayCount(ShaderSources), ShaderSources, 0);
         glCompileShader(ReturnShader.ShaderID);
         sh_glVerifyivSuccess(ReturnShader.ShaderID, GL_VERTEX_SHADER);
     }

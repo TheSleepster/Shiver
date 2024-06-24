@@ -5,12 +5,13 @@
 #define TILEMAP_SIZE_Y 9
 
 #define TILESIZE 16
-#define EPSILON 0.00000000000005
+#define EPSILON 0.00001
 
 // NOTE(Sleepster): The Simplex is no longer just 3 points since we are now using EPA for the distance and normal calculations
+//                  Won't be a dynamic buffer, if you have more than 128 verts what the shit are you doing? Change this then.
 struct simplex
 {
-    vec2 Vertex[32];
+    vec2 Vertex[128];
     int32 VertexCount;
 };
 
@@ -23,7 +24,7 @@ struct gjk_data
 struct gjk_epa_data
 {
     bool32 Collision;
-    real32 Distance;
+    real64 Distance;
     vec2 CollisionNormal;
 };
 
@@ -75,7 +76,7 @@ GJK_ComputeSimplexData(simplex *Simplex, vec2 *Direction)
             }
         }break;
         
-        // NOTE(Sleepster): Triangle Simplex Created, Test
+        // NOTE(Sleepster): The Triangle Simplex Created, Tested below.
         case 3:
         {
             vec2 A = Simplex->Vertex[2];
@@ -191,7 +192,7 @@ HandleGJK(entity *A, entity *B)
 {
     bool Result = {};
     gjk_data GJKData = {};
-    // NOTE(Sleepster): Early return if there is no full shape.
+    // NOTE(Sleepster): Early return if there is a full shape.
     if(A->VertexCount < 3 || B->VertexCount < 3) return(GJKData);
     
     // NOTE(Sleepster): Initial Point to start with. Initial direction does not matter
@@ -211,6 +212,7 @@ HandleGJK(entity *A, entity *B)
             Result = 0;
             break;
         }
+        
         Simplex.Vertex[Simplex.VertexCount++] = Point;
         dAssert(Simplex.VertexCount >= 2 && Simplex.VertexCount <= 3); // control our vertices here
         if(GJK_ComputeSimplexData(&Simplex, &Direction))
@@ -225,11 +227,84 @@ HandleGJK(entity *A, entity *B)
     return(GJKData);
 }
 
+internal void
+EPA_AddToSimplex(simplex *Simplex, vec2 Point, int32 InsertionIndex)
+{
+    if(Simplex->VertexCount >= ArrayCount(Simplex->Vertex))
+    {
+        Assert(false, "Bro how the hell do you have more than 128 vertices?? Check the header to change the simplex array size!\n");
+    }
+    for(int32 VertexIndex = Simplex->VertexCount - 1;
+        VertexIndex >= InsertionIndex;
+        --VertexIndex)
+    {
+        Simplex->Vertex[VertexIndex + 1] = Simplex->Vertex[VertexIndex];
+    }
+    
+    ++Simplex->VertexCount;
+    Simplex->Vertex[InsertionIndex] = Point;
+}
+
+// NOTE(Sleepster): Expanded Polytope Algorithm
 internal gjk_epa_data
 GJK_EPA(entity *A, entity *B)
 {
     gjk_epa_data CollisionInfo = {};
     gjk_data GJKInfo = HandleGJK(A, B);
+    if(GJKInfo.Collision)
+    {
+        simplex *Simplex = &GJKInfo.Simplex;
+        for(;;)
+        {
+            // NOTE(Sleepster): Get the edge closest to the origin of our Minkowski difference,
+            //                  Assume Clockwise
+            epa_edge Edge = {};
+            for(int32 VertexIndex = 0;
+                VertexIndex < Simplex->VertexCount;
+                ++VertexIndex)
+            {
+                int32 IndexA = VertexIndex;
+                int32 IndexB = (VertexIndex == (Simplex->VertexCount - 1)) ? 0 : VertexIndex + 1; // Wrap the index;
+                
+                vec2 PointA = Simplex->Vertex[IndexA];
+                vec2 PointB = Simplex->Vertex[IndexB];
+                vec2 AO = v2Invert(PointA);
+                vec2 AB = PointA - PointB;
+                // NOTE(Sleepster): This the edge normal that points AWAY from the origin when the simplex is clockwise oriented
+                vec2 EdgeNormal = v2Normalize(v2Perp(AB));
+                
+                // NOTE(Sleepster): Find the Distance from the edge. The closest distance is always the perpindicular distance from the edge. 
+                
+                real32 Distance = v2Dot(EdgeNormal, AO);
+                Distance *= -1; // Invert Distance for new search
+                if(Distance < Edge.Distance || VertexIndex == 0)
+                {
+                    Edge.Distance = Distance;
+                    Edge.Index = VertexIndex;
+                    Edge.Normal = EdgeNormal;
+                }
+            }
+            vec2 EPAPoint = GJK_Support(A, B, Edge.Normal);
+            real64 FloatDistance = v2Dot(EPAPoint, Edge.Normal);
+            
+            // NOTE(Sleepster): See if these points are the same as previously acquired ones. If they are, we have our solution
+            if(FloatDistance - Edge.Distance < EPSILON)
+            {
+                // NOTE(Sleepster): Invert the edge normal so that it is pointing towards our Minkowski Difference's origin
+                CollisionInfo.CollisionNormal = v2Invert(Edge.Normal);
+                CollisionInfo.Distance = FloatDistance + EPSILON;
+                CollisionInfo.Collision = GJKInfo.Collision;
+                break;
+            }
+            else 
+            {
+                // NOTE(Sleepster): If we're here, we haven't reached the edge of our Minkowski Difference.
+                //                  Continue by adding points to the simplex in between the two points that made the closest edge.
+                EPA_AddToSimplex(&GJKInfo.Simplex, EPAPoint, Edge.Index + 1);
+            }
+        }
+    }
+    return(CollisionInfo);
 }
 
 internal bool
@@ -396,14 +471,16 @@ GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
         ++Index)
     {
         DrawEntityStaticSprite2D(State->Entities[Index], RenderData);
-        UpdateEntityColliderData(&State->Entities[1]);
     }
     
     for(int32 EntityIndex = 2;
         EntityIndex < State->CurrentEntityCount;
         ++EntityIndex)
     {
-        bool Collision = GJK(&State->Entities[1], &State->Entities[EntityIndex]);
+        UpdateEntityColliderData(&State->Entities[1]);
+        gjk_epa_data CollisionData = GJK_EPA(&State->Entities[1], &State->Entities[EntityIndex]);
+        bool Collision = CollisionData.Collision;
+        //bool Collision = GJK(&State->Entities[1], &State->Entities[EntityIndex]);
         if(Collision)
         {
             Trace("Collision!\n");

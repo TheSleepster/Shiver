@@ -9,7 +9,6 @@
 
 // DEFINES
 #define MAX_TRANSFORMS 10000
-#define ArraySize(Array, Type) (sizeof(Array) / sizeof(Type))
 #define SIMRATE ((1.0f/60.0f)*1000)
 
 #include "OpenGL/GLL.h"
