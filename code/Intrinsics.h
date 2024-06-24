@@ -6,12 +6,16 @@
 #if SHIVER_SLOW
 
 #define Assert(Expression, Message) if(!(Expression)) {OutputDebugStringA(Message); DebugBreak();}
+#define Check(Expression, Message) if(!(Expression)) {OutputDebugStringA(Message);}
+#define dAssert(Expression) if(!(Expression)) {DebugBreak();}
 #define Trace(Message) {OutputDebugStringA(Message);}
 #define print_m(Message, Printing) {char BUFFER[256] = {}; sprintf(BUFFER, Message, Printing); OutputDebugStringA(BUFFER);}
 
 #else
 
 #define Assert(Expression, Message)
+#define Check(Expression, Message) 
+#define dAssert(Expression)
 #define print_m(Message, Printing)
 #define Trace(Message)
 

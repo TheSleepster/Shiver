@@ -192,7 +192,7 @@ minf32(real32 a, real32 b)
 }
 
 internal inline vec2
-v2Perpendicular(vec2 A) 
+v2Perp(vec2 A) 
 {
     vec2 Result = {A.y, -A.x};
     return(Result);
@@ -200,6 +200,13 @@ v2Perpendicular(vec2 A)
 
 internal inline vec2
 v2Inverse(vec2 A) 
+{
+    vec2 Result = {-A.x, -A.y};
+    return(Result);
+}
+
+internal inline vec2
+v2Invert(vec2 A) 
 {
     vec2 Result = {-A.x, -A.y};
     return(Result);

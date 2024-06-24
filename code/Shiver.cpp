@@ -10,21 +10,21 @@
 // NOTE(Sleepster): The Simplex is no longer just 3 points since we are now using EPA for the distance and normal calculations
 struct simplex
 {
-    vec2 Points[32];
+    vec2 Vertex[32];
     int32 VertexCount;
 };
 
 struct gjk_data
 {
-    bool32 Collided;
+    bool32 Collision;
     simplex Simplex;
 };
 
-struct epa_data
+struct gjk_epa_data
 {
-    bool32 Collided;
-    vec2 CollisionNormal;
+    bool32 Collision;
     real32 Distance;
+    vec2 CollisionNormal;
 };
 
 struct epa_edge
@@ -34,26 +34,130 @@ struct epa_edge
     real32 Distance;
 };
 
-internal vec2
-AveragePoint(entity *Entity) 
+// NOTE(Sleepster): This function updates both the simplex and the direction vector
+internal bool
+GJK_ComputeSimplexData(simplex *Simplex, vec2 *Direction)
 {
-    vec2 Average = {};
-    
-    for(int Index = 0; 
-        Index < Entity->VertexCount; 
-        ++Index) 
+    bool Result = 0;
+    switch(Simplex->VertexCount)
     {
-        Average.x += Entity->Vertex[Index].x;
-        Average.y += Entity->Vertex[Index].y;
+        // NOTE(Sleepster): One Vertex, Invalid
+        case 1:
+        {
+            Assert(false, "Invalid code path, Simplex has one Point");
+        }break;
+        
+        // NOTE(Sleepster): Two Vertices, find a third to create the triangle Simplex
+        case 2:
+        {
+            vec2 A = Simplex->Vertex[1];
+            vec2 B = Simplex->Vertex[0];
+            vec2 AO = v2Inverse(A);
+            vec2 AB = A - B;
+            if(v2Dot(AB, AO)) // Is Within bounds of Minkowski sum
+            {
+                vec2 NewDirection = v2Perp(AB);
+                if(v2Dot(NewDirection, AO)) // Wrong direction
+                {
+                    NewDirection = v2Invert(AB);
+                    // NOTE(Sleepster): Wind clockwise
+                    Simplex->Vertex[0] = A;
+                    Simplex->Vertex[1] = B;
+                }
+                *Direction = NewDirection;
+            }
+            else
+            {
+                // NOTE(Sleepster): Readjust the direction and try again.
+                Simplex->Vertex[0] = A;
+                Simplex->VertexCount = 1;
+                *Direction = AO;
+            }
+        }break;
+        
+        // NOTE(Sleepster): Triangle Simplex Created, Test
+        case 3:
+        {
+            vec2 A = Simplex->Vertex[2];
+            vec2 B = Simplex->Vertex[1];
+            vec2 C = Simplex->Vertex[0];
+            vec2 AO = v2Inverse(A);
+            vec2 AB = A - B;
+            vec2 AC = C - A;
+            // NOTE(Sleepster): Check for Clockwise Winding
+            if(v2Dot(v2Perp(AB), AC) > 0)
+            {
+                B = Simplex->Vertex[0];
+                C = Simplex->Vertex[1];
+                
+                vec2 Temp = AB;
+                AB = AC;
+                AC = Temp;
+            }
+            // NOTE(Sleepster): Checks
+            vec2 ACPerp = v2Perp(AC);
+            vec2 ABPerp = v2Inverse(v2Perp(AB));
+            
+            bool OnLeft = (v2Dot(ACPerp, AO) > 0);
+            bool OnRight = (v2Dot(ABPerp, AO) > 0);
+            bool SimpleCase = 0;
+            
+            // NOTE(Sleepster): Determine which direction to check relative to the origin
+            if(!OnRight && !OnLeft)
+            {
+                Result = 1;
+                break;
+            }
+            else if(OnLeft)
+            {
+                // NOTE(Sleepster): If it is on the left, than we have gone to far from the origin. Readjust and try again.
+                if(v2Dot(AC, AO) > 0)
+                {
+                    *Direction = ACPerp;
+                    // NOTE(Sleepster): Swap the first and third vertices and try again
+                    Simplex->Vertex[0] = C;
+                    Simplex->Vertex[1] = A;
+                    Simplex->VertexCount = 2;
+                }
+                else
+                {
+                    SimpleCase = 1;
+                }
+            }
+            else if(OnRight)
+            {
+                if(v2Dot(AB, AO) > 0)
+                {
+                    *Direction = ABPerp;
+                    // NOTE(Sleepster): Swap the first and second vertices and try again.
+                    Simplex->Vertex[1] = B;
+                    Simplex->Vertex[0] = A;
+                    Simplex->VertexCount = 2;
+                }
+                else
+                {
+                    SimpleCase = 1;
+                }
+            }
+            if(SimpleCase)
+            {
+                // NOTE(Sleepster): Failure. Restart completely.
+                Simplex->Vertex[0] = A;
+                Simplex->VertexCount = 1;
+                *Direction = AO;
+            }
+        }break;
+        default:
+        {
+            // NOTE(Sleepster): Something went SERIOUSLY Wrong
+            Assert(false, "How?\n");
+        }break;
     }
-    Average.x /= Entity->VertexCount;
-    Average.y /= Entity->VertexCount;
-    
-    return(Average);
+    return(Result);
 }
 
 internal bool32
-FurthestPoint(entity *Entity, vec2 Direction) 
+GJK_FurthestPoint(entity *Entity, vec2 Direction) 
 { 
     int BestIndex = 0;
     real32 MaxProduct = v2Dot(Entity->Vertex[0], Direction);
@@ -73,100 +177,69 @@ FurthestPoint(entity *Entity, vec2 Direction)
 }
 
 internal vec2
-GJKSupport(entity *A, entity *B, vec2 Direction) 
+GJK_Support(entity *A, entity *B, vec2 Direction) 
 {
-    int AMax = FurthestPoint(A, Direction);
-    int BMax = FurthestPoint(B, -Direction);
+    // NOTE(Sleepster): Find the most extreme point on each entity
+    int AMax = GJK_FurthestPoint(A, Direction);
+    int BMax = GJK_FurthestPoint(B, -Direction);
     
     return(A->Vertex[AMax] - B->Vertex[BMax]);
 }
 
-internal bool32
-GJK(entity *A, entity *B) 
+internal gjk_data
+HandleGJK(entity *A, entity *B)
 {
-    vec2 Simplex[32] = {};
-    vec2 Position1 = AveragePoint(A);
-    vec2 Position2 = AveragePoint(B);
-    vec2 Direction = Position1 - Position2; // Set the direction to the point in the Minkowski Difference
+    bool Result = {};
+    gjk_data GJKData = {};
+    // NOTE(Sleepster): Early return if there is no full shape.
+    if(A->VertexCount < 3 || B->VertexCount < 3) return(GJKData);
     
-    vec2 RegionA;
-    vec2 RegionB;
-    vec2 RegionC;
-    vec2 AO;
-    vec2 AB;
-    vec2 AC;
-    vec2 ACPerp;
-    vec2 ABPerp;
+    // NOTE(Sleepster): Initial Point to start with. Initial direction does not matter
+    vec2 iSupportPoint = GJK_Support(A, B, {1, 0}); 
     
-    // If Zero set to any arbitray Axis
-    if((Direction.x == 0) && (Direction.y == 0)) 
+    simplex Simplex = {};
+    Simplex.Vertex[0] = iSupportPoint;
+    Simplex.VertexCount = 1;
+    // NOTE(Sleepster): Invert Initial direction to begin the search
+    vec2 Direction = v2Invert(iSupportPoint);
+    for(;;)
     {
-        Direction.x = 1.0f;
+        vec2 Point = GJK_Support(A, B, Direction);
+        // NOTE(Sleepster): Early exit, Collision cannot occur
+        if(v2Dot(Point, Direction) < 0)
+        {
+            Result = 0;
+            break;
+        }
+        Simplex.Vertex[Simplex.VertexCount++] = Point;
+        dAssert(Simplex.VertexCount >= 2 && Simplex.VertexCount <= 3); // control our vertices here
+        if(GJK_ComputeSimplexData(&Simplex, &Direction))
+        {
+            Result = 1;
+            break;
+        }
     }
     
-    // Set the First Support as the new point of the Simplex
-    Simplex[0] = GJKSupport(A, B, Direction);
-    if(v2Dot(Simplex[0], Direction) <= 0) 
-    {
-        return(0);
-        // Collision not possible
-    }
-    
-    // Invert the vector so the next search direction is flipped towards the origin
-    Direction = v2Inverse(Direction);
-    
-    int Index = 0;
-    for(;;) 
-    {
-        RegionA = Simplex[++Index] = GJKSupport(A, B, Direction);
-        if(v2Dot(RegionA, Direction) <= 0) 
-        {
-            return(0);
-            // Collision not possible
-        }
-        
-        AO = v2Inverse(RegionA); // From point A to Origin is likely just negative A
-        // Simplex has 2 points, it is not a triangle yet.
-        if(Index < 2) 
-        {
-            RegionB = Simplex[0];
-            AB = RegionB - RegionA;
-            Direction = v2TripleProduct(AB, AO, AB);
-            if(v2LengthSq(Direction) == 0) 
-            {
-                Direction = v2Perpendicular(AB);
-            }
-            continue;
-        } 
-        
-        RegionB = Simplex[1];
-        RegionC = Simplex[0];
-        
-        AB = RegionB - RegionA; // Normal from AB to the origin
-        AC = RegionC - RegionA;
-        
-        ACPerp = v2TripleProduct(AB, AC, AC);
-        if(v2Dot(ACPerp, AO) >= 0) 
-        { 
-            Direction = ACPerp;
-        }
-        else 
-        {
-            ABPerp = v2TripleProduct(AC, AB, AB);
-            if(v2Dot(ABPerp, AO) < 0) 
-            {
-                return(1);
-                //Collision
-            }
-            
-            Simplex[0] = Simplex[1]; // Swap the First Element (C);
-            Direction = ABPerp; // New Direction is normal to AB -> Origin
-        }
-        
-        Simplex[1] = Simplex[2]; // Swap Elements
-        --Index;
-    }
+    GJKData.Collision = Result;
+    GJKData.Simplex = Simplex;
+    return(GJKData);
 }
+
+internal gjk_epa_data
+GJK_EPA(entity *A, entity *B)
+{
+    gjk_epa_data CollisionInfo = {};
+    gjk_data GJKInfo = HandleGJK(A, B);
+}
+
+internal bool
+GJK(entity *A, entity *B)
+{
+    gjk_data Result = HandleGJK(A, B);
+    return(Result.Collision);
+}
+
+// NOTE(Sleepster): END OF GJK EPA
 
 internal void 
 UpdateEntityColliderData(entity *Entity)
@@ -330,12 +403,9 @@ GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
         EntityIndex < State->CurrentEntityCount;
         ++EntityIndex)
     {
-        bool Collided = GJK(&State->Entities[1], &State->Entities[EntityIndex]);
-        real32 EntityDistance = v2Distance(State->Entities[1].Position, State->Entities[EntityIndex].Position);
-        
-        if(Collided != 0)
+        bool Collision = GJK(&State->Entities[1], &State->Entities[EntityIndex]);
+        if(Collision)
         {
-            real32 TOI = {};
             Trace("Collision!\n");
         }
     }
