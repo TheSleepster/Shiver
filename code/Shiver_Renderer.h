@@ -39,6 +39,13 @@ enum sprites
     SPRITE_COUNT
 };
 
+enum CameraState
+{
+    CAMERA_GAME,
+    CAMERA_UI,
+    CAMERA_EDITOR
+};
+
 struct win32windowdata
 {
     ivec4 SizeData;
@@ -85,13 +92,6 @@ struct orthocamera2d
     real32 Zoom;
 };
 
-enum CameraState
-{
-    CAMERA_GAME,
-    CAMERA_UI,
-    CAMERA_EDITOR
-};
-
 struct glrenderdata
 {
     uint32 TransformCounter;
@@ -109,7 +109,7 @@ struct glrenderdata
     orthocamera2d Cameras[3];
 };
 
-internal void 
+internal inline void 
 sh_glCreateStaticSprite2D(ivec2 AtlasOffset, ivec2 SpriteSize, 
                           sprites SpriteID, glrenderdata *RenderData)
 {
@@ -150,10 +150,10 @@ CreateOrthographicMatrix(vec4 Data)
     Result.Elements[3][1] =  (Data.Top + Data.Bottom) / (Data.Top - Data.Bottom);
     Result.Elements[3][2] =  0.0f;
     
-    Result.Elements[0][0] = 2.0f / (Data.Right - Data.Left);
-    Result.Elements[1][1] = 2.0f / (Data.Top - Data.Bottom);
-    Result.Elements[2][2] = 1.0f / (1.0f - 0.0f);
-    Result.Elements[3][3] = 1.0f;
+    Result.Elements[0][0] =  2.0f / (Data.Right - Data.Left);
+    Result.Elements[1][1] =  2.0f / (Data.Top - Data.Bottom);
+    Result.Elements[2][2] =  1.0f / (1.0f - 0.0f);
+    Result.Elements[3][3] =  1.0f;
     
     return(Result);
 }

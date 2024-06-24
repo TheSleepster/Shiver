@@ -247,7 +247,7 @@ Win32ProcessWindowMessages(MSG Message, HWND WindowHandle, win32windowdata *Wind
                 Key->IsDown = IsDown;
                 
                 
-                bool AltKeyIsDown = ((Message.lParam & (1 << 29)) !=0);
+                bool AltKeyIsDown = ((Message.lParam & (1 << 29)) != 0);
                 if(VKCode == VK_F4 && AltKeyIsDown) 
                 {
                     GlobalRunning = false;

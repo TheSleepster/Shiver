@@ -135,6 +135,13 @@ internal inline real32
 v2Length(vec2 A) 
 {
     real32 Result = sqrtf(v2LengthSq(A));
+    return(Result);
+}
+
+internal inline real32
+v2Distance(vec2 A, vec2 B)
+{
+    return(v2Length(A - B));
 }
 
 internal inline vec2

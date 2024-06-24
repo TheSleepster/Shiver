@@ -31,7 +31,10 @@ struct entity
     vec2 Velocity;
     vec2 Size;
     
+    int32 VertexCount;
     vec2 Vertex[4];
+    
+    real32 Mass;
 };
 
 struct gamestate

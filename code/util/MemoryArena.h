@@ -30,6 +30,7 @@ MakeMemoryArena(size_t Size)
     return(MemoryArena);
 }
 
+// TODO(Sleepster): Check that the allignment size is actually correct
 internal inline char *
 ArenaAlloc(MemoryArena *MemoryArena, size_t Size) 
 {
