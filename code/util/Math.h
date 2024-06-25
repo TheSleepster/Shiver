@@ -143,7 +143,7 @@ v2Cross(vec2 A, vec2 B)
     real32 Result = A.x*B.y - A.y*B.x;
     return(Result);
 }
-
+// NOTE(Sleepster): It's magnitude but I can't be bothered to change it now
 internal inline real32 
 v2LengthSq(vec2 A) 
 {

@@ -38,29 +38,6 @@ struct epa_edge
     real32 Distance;
 };
 
-
-
-internal void
-ResolveCollision(entity *A, entity *B, vec2 Normal)
-{
-    vec2 RelVelocity = B->Velocity - A->Velocity;
-    real32 VelAlongNormal = v2Dot(RelVelocity, Normal);
-    // NOTE(Sleepster): early return if velocities are seperating
-    if(VelAlongNormal > 0)
-    {
-        return;
-    }
-    // NOTE(Sleepster): Restitution (Ellasticity)
-    real32 E = MinR32(A->Restitution, B->Restitution);
-    // NOTE(Sleepster): Impulse Scaler
-    real32 nJ = -(1 + E) * VelAlongNormal;
-    nJ /= 1 / A->Mass + 1 / B->Mass;
-    
-    vec2 Impulse = nJ * Normal;
-    A->Velocity = A->Velocity - (1 / A->Mass * Impulse);
-    B->Velocity = B->Velocity + (1 / B->Mass * Impulse);
-}
-
 // NOTE(Sleepster): This function updates both the simplex and the direction vector
 internal bool
 GJK_ComputeSimplexData(simplex *Simplex, vec2 *Direction)
@@ -305,6 +282,10 @@ GJK_EPA(entity *A, entity *B)
                 
                 // NOTE(Sleepster): This the edge normal that points AWAY from the origin when the simplex is clockwise oriented
                 vec2 EdgeNormal = v2Normalize(v2Perp(AB));
+                if(v2Dot(EdgeNormal, AO) > 0)
+                {
+                    EdgeNormal = v2Invert(EdgeNormal);
+                }
                 
                 // NOTE(Sleepster): Find the Distance from the edge. The closest distance is always the perpindicular distance from the edge. 
                 real32 Distance = v2Dot(EdgeNormal, AO);
@@ -362,6 +343,11 @@ UpdateEntityColliderData(entity *Entity)
 }
 // NOTE(Sleepster): END OF GJK
 
+// NOTE(Sleepster): Inverse Velocity?
+internal void
+HandleCollisions(gamestate *State)
+{
+}
 
 // TODO(Sleepster): Make it so that we are not making a new sprite every frame, only when we need to actually make it
 internal entity
@@ -376,20 +362,23 @@ CreateEntity(sprites SpriteID, vec2 Position, vec2 Size, glrenderdata *RenderDat
             Entity.Flags = Is_Player;
             Entity.Restitution = 0.0f;
             Entity.Mass = 100.0f;
+            Entity.InvMass = 1 / Entity.Mass;
         }break;
         case SPRITE_FLOOR:
         {
             sh_glCreateStaticSprite2D({16, 0}, {16, 16}, SpriteID, RenderData);
             Entity.Flags = Is_Static;
             Entity.Restitution = 0.0f;
-            Entity.Mass = 0.0f;
+            Entity.Mass = 10.0f;
+            Entity.InvMass = 1 / Entity.Mass;
         }break;
         case SPRITE_WALL:
         {
             sh_glCreateStaticSprite2D({32, 0}, {16, 16}, SpriteID, RenderData);
             Entity.Flags = Is_Static;
             Entity.Restitution = 0.0f;
-            Entity.Mass = 0.0f;
+            Entity.Mass = 10.0f;
+            Entity.InvMass = 1 / Entity.Mass;
         }break;
     }
     
@@ -480,45 +469,33 @@ extern "C"
 GAME_FIXED_UPDATE(GameFixedUpdate)
 {
     const real32 MaxSpeed = 2;
-    State->Entities[1].pPosition = State->Entities[1].Position;
     
-    if(IsGameKeyDown(MOVE_UP, &State->GameInput))
+    if(IsGameKeyDown(MOVE_UP, &State->GameInput) && State->Entities[1].Velocity.y > -MaxSpeed)
     {
-        State->Entities[1].Velocity.y += -MaxSpeed;
     }
-    if(IsGameKeyDown(MOVE_DOWN, &State->GameInput))
+    
+    if(IsGameKeyDown(MOVE_DOWN, &State->GameInput) && State->Entities[1].Velocity.y < MaxSpeed)
     {
-        State->Entities[1].Velocity.y += MaxSpeed;
     }
-    if(IsGameKeyDown(MOVE_LEFT, &State->GameInput))
+    
+    if(IsGameKeyDown(MOVE_LEFT, &State->GameInput) && State->Entities[1].Velocity.x > -MaxSpeed)
     {
-        State->Entities[1].Velocity.x += -MaxSpeed;
     }
-    if(IsGameKeyDown(MOVE_RIGHT, &State->GameInput))
+    
+    if(IsGameKeyDown(MOVE_RIGHT, &State->GameInput) && State->Entities[1].Velocity.x < MaxSpeed)
     {
-        State->Entities[1].Velocity.x += MaxSpeed;
     }
+    
+    if(!IsGameKeyDown(MOVE_RIGHT, &State->GameInput) && !IsGameKeyDown(MOVE_LEFT, &State->GameInput))
+    {
+    }
+    
+    if(!IsGameKeyDown(MOVE_DOWN, &State->GameInput) && !IsGameKeyDown(MOVE_UP, &State->GameInput))
+    {
+    }
+    
     State->Entities[1].Position.x += State->Entities[1].Velocity.x;
     State->Entities[1].Position.y += State->Entities[1].Velocity.y;
-    State->Entities[1].Position = v2Lerp(State->Entities[1].pPosition, State->Entities[1].Position, DeltaTime);
-    
-    State->Entities[1].Velocity = {};
-    
-    for(int32 EntityIndex = 2;
-        EntityIndex < State->CurrentEntityCount;
-        ++EntityIndex)
-    {
-        UpdateEntityColliderData(&State->Entities[1]);
-        gjk_epa_data CollisionData = GJK_EPA(&State->Entities[1], &State->Entities[EntityIndex]);
-        bool Collision = CollisionData.Collision;
-        //local_persist bool Collision = 1;
-        //bool Collision = GJK(&State->Entities[1], &State->Entities[EntityIndex]);
-        if(Collision)
-        {
-            Trace("Collision!\n");
-            
-        }
-    }
 }
 
 extern "C"
@@ -526,6 +503,7 @@ GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
 {
     RenderData->Cameras[CAMERA_GAME].Position = {130, -60};
     DrawEntityStaticSprite2D(State->Entities[1], RenderData);
+    HandleCollisions(State);
     
     for(int32 Index = 2;
         Index <= State->CurrentEntityCount;
