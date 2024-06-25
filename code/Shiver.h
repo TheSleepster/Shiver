@@ -19,22 +19,37 @@ enum VertexPositions
     BOTTOM_RIGHT
 };
 
+enum entityflags
+{
+    Is_Static = 0x01,
+    Is_Player = 0x02,
+    FlagCount,
+};
+
 // TODO(Sleepster): Sprite Directions
 struct entity
 {
+    uint64 Flags;
+    
     sprites SpriteID;
     spritedata Sprite;
     
     vec2 pPosition;
     vec2 Position;
     
+    vec2 pVelocity;
     vec2 Velocity;
     vec2 Size;
     
     int32 VertexCount;
     vec2 Vertex[4];
     
+    // NOTE(Sleepster): This is spooky
+    real32 Rotation;
+    
     real32 Mass;
+    real32 InvMass;
+    real32 Restitution;
 };
 
 struct gamestate

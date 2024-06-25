@@ -5,7 +5,10 @@
 #define TILEMAP_SIZE_Y 9
 
 #define TILESIZE 16
-#define EPSILON 0.00001
+#define STATIC_MASS 10000
+
+#define GJK_TOLERANCE 0.00001
+#define EPSILON 0.05
 
 // NOTE(Sleepster): The Simplex is no longer just 3 points since we are now using EPA for the distance and normal calculations
 //                  Won't be a dynamic buffer, if you have more than 128 verts what the shit are you doing? Change this then.
@@ -35,6 +38,29 @@ struct epa_edge
     real32 Distance;
 };
 
+
+
+internal void
+ResolveCollision(entity *A, entity *B, vec2 Normal)
+{
+    vec2 RelVelocity = B->Velocity - A->Velocity;
+    real32 VelAlongNormal = v2Dot(RelVelocity, Normal);
+    // NOTE(Sleepster): early return if velocities are seperating
+    if(VelAlongNormal > 0)
+    {
+        return;
+    }
+    // NOTE(Sleepster): Restitution (Ellasticity)
+    real32 E = MinR32(A->Restitution, B->Restitution);
+    // NOTE(Sleepster): Impulse Scaler
+    real32 nJ = -(1 + E) * VelAlongNormal;
+    nJ /= 1 / A->Mass + 1 / B->Mass;
+    
+    vec2 Impulse = nJ * Normal;
+    A->Velocity = A->Velocity - (1 / A->Mass * Impulse);
+    B->Velocity = B->Velocity + (1 / B->Mass * Impulse);
+}
+
 // NOTE(Sleepster): This function updates both the simplex and the direction vector
 internal bool
 GJK_ComputeSimplexData(simplex *Simplex, vec2 *Direction)
@@ -53,14 +79,15 @@ GJK_ComputeSimplexData(simplex *Simplex, vec2 *Direction)
         {
             vec2 A = Simplex->Vertex[1];
             vec2 B = Simplex->Vertex[0];
-            vec2 AO = v2Inverse(A);
-            vec2 AB = A - B;
+            vec2 AO = v2Invert(A);
+            vec2 AB = B - A;
             if(v2Dot(AB, AO)) // Is Within bounds of Minkowski sum
             {
                 vec2 NewDirection = v2Perp(AB);
-                if(v2Dot(NewDirection, AO)) // Wrong direction
+                if(v2Dot(NewDirection, AO) < 0) // Wrong direction
                 {
-                    NewDirection = v2Invert(AB);
+                    NewDirection = v2Invert(NewDirection);
+                    Check(v2Dot(NewDirection, AO) >= 0, "Invalid code path\n");
                     // NOTE(Sleepster): Wind clockwise
                     Simplex->Vertex[0] = A;
                     Simplex->Vertex[1] = B;
@@ -82,22 +109,24 @@ GJK_ComputeSimplexData(simplex *Simplex, vec2 *Direction)
             vec2 A = Simplex->Vertex[2];
             vec2 B = Simplex->Vertex[1];
             vec2 C = Simplex->Vertex[0];
-            vec2 AO = v2Inverse(A);
-            vec2 AB = A - B;
+            vec2 AO = v2Invert(A);
+            vec2 AB = B - A;
             vec2 AC = C - A;
             // NOTE(Sleepster): Check for Clockwise Winding
-            if(v2Dot(v2Perp(AB), AC) > 0)
+            if(v2Dot(v2Perp(AC), AB) > 0)
             {
+                Trace("Invalid code path, if(v2Dot(v2Perp(AC), AB) > 0) on LN 118\n");
                 B = Simplex->Vertex[0];
                 C = Simplex->Vertex[1];
                 
                 vec2 Temp = AB;
                 AB = AC;
                 AC = Temp;
+                Assert(v2Dot(v2Perp(AB), AC) > 0, "What?\n");
             }
             // NOTE(Sleepster): Checks
             vec2 ACPerp = v2Perp(AC);
-            vec2 ABPerp = v2Inverse(v2Perp(AB));
+            vec2 ABPerp = v2Invert(v2Perp(AB));
             
             bool OnLeft = (v2Dot(ACPerp, AO) > 0);
             bool OnRight = (v2Dot(ABPerp, AO) > 0);
@@ -111,6 +140,7 @@ GJK_ComputeSimplexData(simplex *Simplex, vec2 *Direction)
             }
             else if(OnLeft)
             {
+                Assert(!OnRight, "On right as well?\n");
                 // NOTE(Sleepster): If it is on the left, than we have gone to far from the origin. Readjust and try again.
                 if(v2Dot(AC, AO) > 0)
                 {
@@ -127,6 +157,7 @@ GJK_ComputeSimplexData(simplex *Simplex, vec2 *Direction)
             }
             else if(OnRight)
             {
+                Assert(!OnLeft, "On left as well?\n");
                 if(v2Dot(AB, AO) > 0)
                 {
                     *Direction = ABPerp;
@@ -251,6 +282,7 @@ GJK_EPA(entity *A, entity *B)
 {
     gjk_epa_data CollisionInfo = {};
     gjk_data GJKInfo = HandleGJK(A, B);
+    CollisionInfo.Collision = GJKInfo.Collision;
     if(GJKInfo.Collision)
     {
         simplex *Simplex = &GJKInfo.Simplex;
@@ -269,18 +301,23 @@ GJK_EPA(entity *A, entity *B)
                 vec2 PointA = Simplex->Vertex[IndexA];
                 vec2 PointB = Simplex->Vertex[IndexB];
                 vec2 AO = v2Invert(PointA);
-                vec2 AB = PointA - PointB;
+                vec2 AB = {PointB.x - PointA.x, PointB.y - PointA.y};
+                
                 // NOTE(Sleepster): This the edge normal that points AWAY from the origin when the simplex is clockwise oriented
                 vec2 EdgeNormal = v2Normalize(v2Perp(AB));
                 
                 // NOTE(Sleepster): Find the Distance from the edge. The closest distance is always the perpindicular distance from the edge. 
-                
                 real32 Distance = v2Dot(EdgeNormal, AO);
+                
+                Assert(Distance <= 0, "Distance is not less than zero\n");
                 Distance *= -1; // Invert Distance for new search
+                Assert(Distance >= 0, "Distance is not greater than zero\n");
+                
                 if(Distance < Edge.Distance || VertexIndex == 0)
                 {
+                    // NOTE(Sleepster): Shorter edge found
                     Edge.Distance = Distance;
-                    Edge.Index = VertexIndex;
+                    Edge.Index = IndexB;
                     Edge.Normal = EdgeNormal;
                 }
             }
@@ -288,12 +325,11 @@ GJK_EPA(entity *A, entity *B)
             real64 FloatDistance = v2Dot(EPAPoint, Edge.Normal);
             
             // NOTE(Sleepster): See if these points are the same as previously acquired ones. If they are, we have our solution
-            if(FloatDistance - Edge.Distance < EPSILON)
+            if(FloatDistance - Edge.Distance < GJK_TOLERANCE)
             {
                 // NOTE(Sleepster): Invert the edge normal so that it is pointing towards our Minkowski Difference's origin
                 CollisionInfo.CollisionNormal = v2Invert(Edge.Normal);
                 CollisionInfo.Distance = FloatDistance + EPSILON;
-                CollisionInfo.Collision = GJKInfo.Collision;
                 break;
             }
             else 
@@ -337,14 +373,23 @@ CreateEntity(sprites SpriteID, vec2 Position, vec2 Size, glrenderdata *RenderDat
         case SPRITE_DICE:
         {
             sh_glCreateStaticSprite2D({0, 0}, {16, 16}, SpriteID, RenderData);
+            Entity.Flags = Is_Player;
+            Entity.Restitution = 0.0f;
+            Entity.Mass = 100.0f;
         }break;
         case SPRITE_FLOOR:
         {
             sh_glCreateStaticSprite2D({16, 0}, {16, 16}, SpriteID, RenderData);
+            Entity.Flags = Is_Static;
+            Entity.Restitution = 0.0f;
+            Entity.Mass = 0.0f;
         }break;
         case SPRITE_WALL:
         {
             sh_glCreateStaticSprite2D({32, 0}, {16, 16}, SpriteID, RenderData);
+            Entity.Flags = Is_Static;
+            Entity.Restitution = 0.0f;
+            Entity.Mass = 0.0f;
         }break;
     }
     
@@ -426,7 +471,7 @@ GAME_ON_AWAKE(GameOnAwake)
     
     State->Entities[0] = {};
     State->CurrentEntityCount = 0;
-    State->Entities[1] = CreateEntity(SPRITE_DICE, {130, 60}, {16, 16}, RenderData, State);
+    State->Entities[1] = CreateEntity(SPRITE_DICE, {160, 30}, {16, 16}, RenderData, State);
     DrawTilemap(Tilemap, RenderData, State);
     //sh_FMODPlaySoundFX(AudioSubsystem->SoundFX[SFX_TEST]);
 }
@@ -458,6 +503,22 @@ GAME_FIXED_UPDATE(GameFixedUpdate)
     State->Entities[1].Position = v2Lerp(State->Entities[1].pPosition, State->Entities[1].Position, DeltaTime);
     
     State->Entities[1].Velocity = {};
+    
+    for(int32 EntityIndex = 2;
+        EntityIndex < State->CurrentEntityCount;
+        ++EntityIndex)
+    {
+        UpdateEntityColliderData(&State->Entities[1]);
+        gjk_epa_data CollisionData = GJK_EPA(&State->Entities[1], &State->Entities[EntityIndex]);
+        bool Collision = CollisionData.Collision;
+        //local_persist bool Collision = 1;
+        //bool Collision = GJK(&State->Entities[1], &State->Entities[EntityIndex]);
+        if(Collision)
+        {
+            Trace("Collision!\n");
+            
+        }
+    }
 }
 
 extern "C"
@@ -471,19 +532,5 @@ GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
         ++Index)
     {
         DrawEntityStaticSprite2D(State->Entities[Index], RenderData);
-    }
-    
-    for(int32 EntityIndex = 2;
-        EntityIndex < State->CurrentEntityCount;
-        ++EntityIndex)
-    {
-        UpdateEntityColliderData(&State->Entities[1]);
-        gjk_epa_data CollisionData = GJK_EPA(&State->Entities[1], &State->Entities[EntityIndex]);
-        bool Collision = CollisionData.Collision;
-        //bool Collision = GJK(&State->Entities[1], &State->Entities[EntityIndex]);
-        if(Collision)
-        {
-            Trace("Collision!\n");
-        }
     }
 }

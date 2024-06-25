@@ -48,6 +48,16 @@ operator+(vec2 A, vec2 B)
     return(Result);
 }
 
+internal inline vec2
+operator-=(vec2 A, real32 B)
+{
+    vec2 Result = {};
+    Result.x = A.x - B;
+    Result.y = A.y - B;
+    
+    return(Result);
+}
+
 internal inline vec2 
 operator*(vec2 A, vec2 B) 
 {
@@ -64,6 +74,16 @@ operator*(vec2 A, real32 B)
     vec2 Result = {};
     Result.x = A.x * B;
     Result.y = A.y * B;
+    
+    return(Result);
+}
+
+internal inline vec2 
+operator*(real32 A, vec2 B)
+{
+    vec2 Result = {};
+    Result.x = A * B.x;
+    Result.y = A * B.y;
     
     return(Result);
 }
@@ -176,7 +196,7 @@ v2Lerp(vec2 A, vec2 B, real32 T)
 }
 
 internal inline real32 
-maxf32(real32 a, real32 b) 
+MaxR32(real32 a, real32 b) 
 {
     if(a > b) 
     {
@@ -186,7 +206,7 @@ maxf32(real32 a, real32 b)
 }
 
 internal inline real32 
-minf32(real32 a, real32 b) 
+MinR32(real32 a, real32 b) 
 {
     if(a < b) 
     {
@@ -227,6 +247,57 @@ v2TripleProduct(vec2 A, vec2 B, vec2 C)
     Result.y = (B.y*AC) - (A.y*BC);
     
     return(Result);
+}
+
+internal inline bool
+operator<(vec2 A, vec2 B)
+{
+    real32 Ax = v2Length(A); 
+    real32 Bx = v2Length(B);
+    if(Ax < Bx)
+    {
+        return(1);
+    }
+    else
+    {
+        return(0);
+    }
+}
+
+internal inline bool
+operator>(vec2 A, vec2 B)
+{
+    real32 Ax = v2Length(A); 
+    real32 Bx = v2Length(B);
+    if(Ax > Bx)
+    {
+        return(1);
+    }
+    else
+    {
+        return(0);
+    }
+}
+
+internal inline vec2
+v2Min(vec2 A, vec2 B)
+{
+    if(A < B) 
+    {
+        return(A);
+    }
+    return(B);
+}
+
+
+internal inline vec2
+v2Max(vec2 A, vec2 B)
+{
+    if(A < B) 
+    {
+        return(A);
+    }
+    return(B);
 }
 
 // FLOAT 2x2 MATRIX 
