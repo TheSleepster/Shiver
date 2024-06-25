@@ -27,7 +27,7 @@ struct gjk_data
 struct gjk_epa_data
 {
     bool32 Collision;
-    real64 Distance;
+    real64 Depth;
     vec2 CollisionNormal;
 };
 
@@ -310,7 +310,7 @@ GJK_EPA(entity *A, entity *B)
             {
                 // NOTE(Sleepster): Invert the edge normal so that it is pointing towards our Minkowski Difference's origin
                 CollisionInfo.CollisionNormal = v2Invert(Edge.Normal);
-                CollisionInfo.Distance = FloatDistance + EPSILON;
+                CollisionInfo.Depth = FloatDistance + EPSILON;
                 break;
             }
             else 
@@ -359,7 +359,7 @@ CreateEntity(sprites SpriteID, vec2 Position, vec2 Size, glrenderdata *RenderDat
         case SPRITE_DICE:
         {
             sh_glCreateStaticSprite2D({0, 0}, {16, 16}, SpriteID, RenderData);
-            Entity.Flags = Is_Player;
+            Entity.Flags = IS_PLAYER|IS_ACTIVE;
             Entity.Restitution = 0.0f;
             Entity.Mass = 100.0f;
             Entity.InvMass = 1 / Entity.Mass;
@@ -367,7 +367,7 @@ CreateEntity(sprites SpriteID, vec2 Position, vec2 Size, glrenderdata *RenderDat
         case SPRITE_FLOOR:
         {
             sh_glCreateStaticSprite2D({16, 0}, {16, 16}, SpriteID, RenderData);
-            Entity.Flags = Is_Static;
+            Entity.Flags = IS_STATIC|IS_ACTIVE;
             Entity.Restitution = 0.0f;
             Entity.Mass = 10.0f;
             Entity.InvMass = 1 / Entity.Mass;
@@ -375,7 +375,7 @@ CreateEntity(sprites SpriteID, vec2 Position, vec2 Size, glrenderdata *RenderDat
         case SPRITE_WALL:
         {
             sh_glCreateStaticSprite2D({32, 0}, {16, 16}, SpriteID, RenderData);
-            Entity.Flags = Is_Static;
+            Entity.Flags = IS_STATIC|IS_ACTIVE;
             Entity.Restitution = 0.0f;
             Entity.Mass = 10.0f;
             Entity.InvMass = 1 / Entity.Mass;
@@ -447,10 +447,10 @@ GAME_ON_AWAKE(GameOnAwake)
 {
     const uint8 Tilemap[TILEMAP_SIZE_Y][TILEMAP_SIZE_X] = 
     {
-        {1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1},
-        {1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
-        {1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
-        {1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
+        {0,0,0,0, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1},
+        {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
+        {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
+        {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
         {1,0,0,0, 1,1,1,1, 0,1,1,0, 0,0,0,0, 1},
         {1,0,0,0, 1,0,0,0, 0,0,1,0, 0,0,0,0, 1},
         {1,0,0,0, 1,0,0,0, 0,0,1,0, 0,0,0,0, 1},
@@ -462,40 +462,32 @@ GAME_ON_AWAKE(GameOnAwake)
     State->CurrentEntityCount = 0;
     State->Entities[1] = CreateEntity(SPRITE_DICE, {160, 30}, {16, 16}, RenderData, State);
     DrawTilemap(Tilemap, RenderData, State);
+    
+    // NOTE(Sleepster): see about making it so that I can just call the event name to play it?
     //sh_FMODPlaySoundFX(AudioSubsystem->SoundFX[SFX_TEST]);
 }
+
+internal void
+sh_PhysicsLerp(real32 DeltaTime)
+{
+}
+
+// Position / Time = Velocity;
+// Velocity / Time = Acceleration;
+// Acceleration / Time = Impluse;
+// Impluse = Force * Time :: Impulse = delta A over time
+
+// Position = Velocity * Time;
+// Force = ma
+// A = Force / Mass
+
+// Velocity = A * T
+// F = ma
+// NOTE(Sleepster): Get the acceleration, then find the force using said acceleration. Add the force to the position.
 
 extern "C"
 GAME_FIXED_UPDATE(GameFixedUpdate)
 {
-    const real32 MaxSpeed = 2;
-    
-    if(IsGameKeyDown(MOVE_UP, &State->GameInput) && State->Entities[1].Velocity.y > -MaxSpeed)
-    {
-    }
-    
-    if(IsGameKeyDown(MOVE_DOWN, &State->GameInput) && State->Entities[1].Velocity.y < MaxSpeed)
-    {
-    }
-    
-    if(IsGameKeyDown(MOVE_LEFT, &State->GameInput) && State->Entities[1].Velocity.x > -MaxSpeed)
-    {
-    }
-    
-    if(IsGameKeyDown(MOVE_RIGHT, &State->GameInput) && State->Entities[1].Velocity.x < MaxSpeed)
-    {
-    }
-    
-    if(!IsGameKeyDown(MOVE_RIGHT, &State->GameInput) && !IsGameKeyDown(MOVE_LEFT, &State->GameInput))
-    {
-    }
-    
-    if(!IsGameKeyDown(MOVE_DOWN, &State->GameInput) && !IsGameKeyDown(MOVE_UP, &State->GameInput))
-    {
-    }
-    
-    State->Entities[1].Position.x += State->Entities[1].Velocity.x;
-    State->Entities[1].Position.y += State->Entities[1].Velocity.y;
 }
 
 extern "C"

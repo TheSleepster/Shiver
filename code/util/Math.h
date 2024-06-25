@@ -180,7 +180,7 @@ v2Normalize(vec2 A)
 }
 
 internal inline real32
-Lerp(real32 A, real32 B, real32 T) 
+LerpR32(real32 A, real32 B, real32 T) 
 {
     return(A + (B - A) * T);
 }
@@ -189,8 +189,8 @@ internal inline vec2
 v2Lerp(vec2 A, vec2 B, real32 T) 
 {
     vec2 Result = {};
-    Result.x = Lerp(A.x, B.x, T);
-    Result.y = Lerp(A.y, B.y, T);
+    Result.x = LerpR32(A.x, B.x, T);
+    Result.y = LerpR32(A.y, B.y, T);
     
     return(Result);
 }
@@ -298,6 +298,13 @@ v2Max(vec2 A, vec2 B)
         return(A);
     }
     return(B);
+}
+
+internal inline real32
+ClampR32(real32 Value, real32 Min, real32 Max)
+{
+    const real32 Val = Value < Min ? Min : Value;
+    return(Val > Max ? Max : Val);
 }
 
 // FLOAT 2x2 MATRIX 
@@ -534,8 +541,8 @@ internal inline ivec2
 iVLerp(ivec2 A, ivec2 B, real32 T) 
 {
     ivec2 Result = {};
-    Result.x = int32(Lerp((real32)A.x, (real32)B.x, T));
-    Result.y = int32(Lerp((real32)A.y, (real32)B.y, T));
+    Result.x = int32(LerpR32((real32)A.x, (real32)B.x, T));
+    Result.y = int32(LerpR32((real32)A.y, (real32)B.y, T));
     
     return(Result);
 }

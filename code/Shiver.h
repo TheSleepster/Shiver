@@ -21,37 +21,50 @@ enum VertexPositions
 
 enum entityflags
 {
-    Is_Static = 0x01,
-    Is_Player = 0x02,
+    IS_STATIC = 0x01,
+    IS_PLAYER = 0x02,
+    IS_ACTIVE = 0x03,
     FlagCount
 };
 
 // TODO(Sleepster): Sprite Directions
 struct entity
 {
-    uint64 Flags;
+    uint32 Flags;
     
     sprites SpriteID;
     spritedata Sprite;
     
+    vec2 Size;
     vec2 Position;
     vec2 Velocity;
-    
-    vec2 Size;
+    vec2 Acceleration;
+    vec2 AppliedForce;
+    vec2 Vertex[4];
     
     int32 VertexCount;
-    vec2 Vertex[4];
     
     real32 Mass;
     real32 InvMass;
     
     // NOTE(Sleepster): This is spooky
+    real32 Radius;
     real32 Rotation;
     real32 Inertia;
     real32 InvInertia;
     
+    real32 StaticFriction;
+    real32 DynamicFriction;
+    
     real32 Density;
     real32 Restitution;
+};
+
+struct time
+{
+    real32 DeltaTime;
+    real32 CurrentTime;
+    real32 NextTimestep;
 };
 
 struct gamestate
@@ -63,13 +76,13 @@ struct gamestate
     entity Entities[256];
 };
 
-#define GAME_UPDATE_AND_RENDER(name) void name(gamestate *State, glrenderdata *RenderData, fmod_sound_subsystem_data *AudioSubsystem,  real32 DeltaTime)
+#define GAME_UPDATE_AND_RENDER(name) void name(gamestate *State, glrenderdata *RenderData, fmod_sound_subsystem_data *AudioSubsystem, time Time)
 typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
 GAME_UPDATE_AND_RENDER(GameUpdateAndRenderStub)
 {
 }
 
-#define GAME_FIXED_UPDATE(name) void name(gamestate *State, glrenderdata *RenderData, real32 DeltaTime)
+#define GAME_FIXED_UPDATE(name) void name(gamestate *State, glrenderdata *RenderData, time Time)
 typedef GAME_FIXED_UPDATE(game_fixed_update);
 GAME_FIXED_UPDATE(GameFixedUpdateStub)
 {

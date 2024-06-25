@@ -428,22 +428,23 @@ WinMain(HINSTANCE hInstance,
 #endif
                 MSG Message = {0};
                 Win32ProcessWindowMessages(Message, WindowHandle, &WindowData, &State);
-                real32 InterpolationDelta = {};
+                
+                time Time = {};
                 // FIXED UPDATE (From DeltaTime)
-                if(SimulationDelta >= SIMRATE)
+                if(Accumulator >= SIMRATE)
                 {
-                    InterpolationDelta = SimulationDelta / SIMRATE;
+                    Time.DeltaTime = SIMRATE;
                     
-                    Game.FixedUpdate(&State, &RenderData, InterpolationDelta);
+                    Game.FixedUpdate(&State, &RenderData, Time);
                     FMOD_System_Update(FMODSubsystemData.CoreSystem);
                     FMOD_Studio_System_Update(FMODSubsystemData.StudioSystem);
                     
-                    SimulationDelta = 0;
+                    Accumulator -= Time.DeltaTime;
                 }
                 
                 
                 // UPDATE GAME (Framerate Independant)
-                Game.UnlockedUpdate(&State, &RenderData, &FMODSubsystemData, InterpolationDelta);
+                Game.UnlockedUpdate(&State, &RenderData, &FMODSubsystemData, Time);
                 sh_glRender(&WindowData, WindowHandle, &RenderData, &TransientStorage);
                 
                 
@@ -458,7 +459,7 @@ WinMain(HINSTANCE hInstance,
                 real32 MSPerFrame = (1000 *(real32)DeltaCounter) / real32(PerfCountFrequency);
                 int32 FPS = int32(PerfCountFrequency / DeltaCounter);
                 
-                SimulationDelta += MSPerFrame;
+                Accumulator += MSPerFrame;
                 LastCounter = EndCounter;
                 
                 print_m("%.02fms\n", MSPerFrame);
