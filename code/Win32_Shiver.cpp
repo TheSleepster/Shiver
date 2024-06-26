@@ -54,15 +54,18 @@
 #include "Win32_Shiver.h"
 #include "Shiver_Renderer.h"
 #include "Shiver_AudioEngine.h"
+#include "Shiver_Globals.h"
 
 // CPP FILES FOR UNITY BUILD
 #include "Shiver_Input.cpp"
 #include "Shiver_Renderer.cpp"
 #include "Shiver_AudioEngine.cpp"
 
-
-global_variable bool GlobalRunning;
-
+internal inline real32
+GetLastTime()
+{
+    return((1000 *(real32)DeltaCounter) / real32(PerfCountFrequency));
+}
 
 internal inline FILETIME
 Win32MaxFiletime(FILETIME A, FILETIME B) 
@@ -297,7 +300,7 @@ WinMain(HINSTANCE hInstance,
     
     LARGE_INTEGER PerfCountFrequencyResult;
     QueryPerformanceFrequency(&PerfCountFrequencyResult);
-    int64 PerfCountFrequency = PerfCountFrequencyResult.QuadPart;
+    PerfCountFrequency = PerfCountFrequencyResult.QuadPart;
     
     WNDCLASS Window = {};
     Window.style = CS_OWNDC | CS_VREDRAW | CS_HREDRAW;
@@ -376,6 +379,7 @@ WinMain(HINSTANCE hInstance,
             HGLRC MainRenderingContext = WGLFunctions.wglCreateContextAttribsARB(WindowDC, 0, ContextAttributes);
             wglMakeCurrent(WindowDC, MainRenderingContext);
             
+            // NOTE(Sleepster): This will break collision detection and resolution
             // VSYNC
             WGLFunctions.wglSwapIntervalEXT(0);
             // VSYNC
@@ -430,21 +434,31 @@ WinMain(HINSTANCE hInstance,
                 Win32ProcessWindowMessages(Message, WindowHandle, &WindowData, &State);
                 
                 time Time = {};
-                // FIXED UPDATE (From DeltaTime)
-                if(Accumulator >= SIMRATE)
+                
+                Time.DeltaTime = SIMRATE/1000;
+                Time.CurrentTime = GetLastTime();
+                Time.NextTimestep = Time.CurrentTime + Time.DeltaTime;
+                
+                // NOTE(Sleepster): Prevents issues
+                if(Accumulator >= 2 * SIMRATE)
                 {
-                    Time.DeltaTime = SIMRATE;
-                    
+                    Accumulator = SIMRATE;
+                }
+                // FIXED UPDATE (From DeltaTime)
+                while(Accumulator >= SIMRATE)
+                {
                     Game.FixedUpdate(&State, &RenderData, Time);
                     FMOD_System_Update(FMODSubsystemData.CoreSystem);
                     FMOD_Studio_System_Update(FMODSubsystemData.StudioSystem);
-                    
                     Accumulator -= Time.DeltaTime;
                 }
+                Time.Alpha = Accumulator / Time.DeltaTime;
                 
                 
                 // UPDATE GAME (Framerate Independant)
                 Game.UnlockedUpdate(&State, &RenderData, &FMODSubsystemData, Time);
+                
+                // TODO(Sleepster): Maybe lock this to a frametimer?
                 sh_glRender(&WindowData, WindowHandle, &RenderData, &TransientStorage);
                 
                 
@@ -455,8 +469,8 @@ WinMain(HINSTANCE hInstance,
                 LARGE_INTEGER EndCounter;
                 QueryPerformanceCounter(&EndCounter);
                 
-                int64 DeltaCounter = EndCounter.QuadPart - LastCounter.QuadPart;
-                real32 MSPerFrame = (1000 *(real32)DeltaCounter) / real32(PerfCountFrequency);
+                DeltaCounter = real64(EndCounter.QuadPart - LastCounter.QuadPart);
+                real32 MSPerFrame = GetLastTime();
                 int32 FPS = int32(PerfCountFrequency / DeltaCounter);
                 
                 Accumulator += MSPerFrame;

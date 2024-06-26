@@ -49,11 +49,11 @@ operator+(vec2 A, vec2 B)
 }
 
 internal inline vec2
-operator-=(vec2 A, real32 B)
+operator-=(vec2 &A, real32 B)
 {
     vec2 Result = {};
-    Result.x = A.x - B;
-    Result.y = A.y - B;
+    A.x = A.x - B;
+    A.y = A.y - B;
     
     return(Result);
 }
@@ -69,16 +69,6 @@ operator*(vec2 A, vec2 B)
 }
 
 internal inline vec2 
-operator*(vec2 A, real32 B) 
-{
-    vec2 Result = {};
-    Result.x = A.x * B;
-    Result.y = A.y * B;
-    
-    return(Result);
-}
-
-internal inline vec2 
 operator*(real32 A, vec2 B)
 {
     vec2 Result = {};
@@ -86,6 +76,22 @@ operator*(real32 A, vec2 B)
     Result.y = A * B.y;
     
     return(Result);
+}
+
+internal inline vec2
+operator*(vec2 A, real32 B)
+{
+    vec2 Result = {};
+    Result.x = A.x * B;
+    Result.y = A.y * B;
+    return(Result);
+}
+
+internal inline vec2 
+operator*=(vec2 &B, real32 A)
+{
+    B = A * B;
+    return(B);
 }
 
 internal inline vec2
@@ -111,14 +117,12 @@ operator/(vec2 A, real32 B)
 }
 
 internal inline vec2
-operator+=(vec2 A, vec2 B)
+operator+=(vec2 &A, vec2 B)
 {
-    vec2 Result = {};
+    A.x = A.x + B.x;
+    A.y = A.y + B.y;
     
-    Result.x = A.x + B.x;
-    Result.y = A.y + B.y;
-    
-    return(Result);
+    return(A);
 }
 
 // FLOAT OPERATIONS
@@ -179,6 +183,17 @@ v2Normalize(vec2 A)
     return(Result);
 }
 
+internal vec2
+v2Reflect(vec2 A, vec2 B)
+{
+    vec2 Result = {};
+    real32 Dot = v2Dot(A, B);
+    
+    Result.x = A.x - (2 * Dot * B.x);
+    Result.y = A.y - (2 * Dot * B.y);
+    return(Result);
+}
+
 internal inline real32
 LerpR32(real32 A, real32 B, real32 T) 
 {
@@ -213,6 +228,13 @@ MinR32(real32 a, real32 b)
         return(a);
     }
     return(b);
+}
+
+internal inline real32
+Square(real32 A)
+{
+    real32 Result = A * A;
+    return(Result); 
 }
 
 internal inline vec2

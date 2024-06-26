@@ -26,7 +26,6 @@ struct win32gamecode
     bool IsLoaded;
 };
 
-
 internal FILETIME Win32MaxFileTime(FILETIME A, FILETIME B);
 internal FILETIME Win32GetLastWriteTime(const char *Filename);
 internal int32 GetFileSizeInBytes(const char *Filepath);

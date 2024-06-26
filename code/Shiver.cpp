@@ -38,6 +38,34 @@ struct epa_edge
     real32 Distance;
 };
 
+// TODO(Sleepster): Make it so that instead of checking all 8 directions, we only check 4 (North, South, East, West)
+// TODO(Sleepster): This breaks with VSYNC btw. Fix that.
+internal void
+ResolveSolidCollision(entity *A, gjk_epa_data Data)
+{
+    A->Velocity = v2Reflect(A->Velocity, Data.CollisionNormal);
+    
+    if(Data.CollisionNormal.y == 1)
+    {
+        A->Position.y += (real32)EPSILON;
+    }
+    else if(Data.CollisionNormal.y == -1)
+    {
+        A->Position.y += -(real32)EPSILON;
+    }
+    
+    if(Data.CollisionNormal.x == 1)
+    {
+        A->Position.x += (real32)EPSILON;
+    }
+    else if(Data.CollisionNormal.x == -1)
+    {
+        A->Position.x += -(real32)EPSILON;
+    }
+    
+    A->Velocity = {0.0f, 0.0f};
+}
+
 // NOTE(Sleepster): This function updates both the simplex and the direction vector
 internal bool
 GJK_ComputeSimplexData(simplex *Simplex, vec2 *Direction)
@@ -343,12 +371,6 @@ UpdateEntityColliderData(entity *Entity)
 }
 // NOTE(Sleepster): END OF GJK
 
-// NOTE(Sleepster): Inverse Velocity?
-internal void
-HandleCollisions(gamestate *State)
-{
-}
-
 // TODO(Sleepster): Make it so that we are not making a new sprite every frame, only when we need to actually make it
 internal entity
 CreateEntity(sprites SpriteID, vec2 Position, vec2 Size, glrenderdata *RenderData, gamestate *State)
@@ -359,7 +381,7 @@ CreateEntity(sprites SpriteID, vec2 Position, vec2 Size, glrenderdata *RenderDat
         case SPRITE_DICE:
         {
             sh_glCreateStaticSprite2D({0, 0}, {16, 16}, SpriteID, RenderData);
-            Entity.Flags = IS_PLAYER|IS_ACTIVE;
+            Entity.Flags = IS_ACTOR|IS_ACTIVE;
             Entity.Restitution = 0.0f;
             Entity.Mass = 100.0f;
             Entity.InvMass = 1 / Entity.Mass;
@@ -367,7 +389,7 @@ CreateEntity(sprites SpriteID, vec2 Position, vec2 Size, glrenderdata *RenderDat
         case SPRITE_FLOOR:
         {
             sh_glCreateStaticSprite2D({16, 0}, {16, 16}, SpriteID, RenderData);
-            Entity.Flags = IS_STATIC|IS_ACTIVE;
+            Entity.Flags = IS_SOLID|IS_ACTIVE;
             Entity.Restitution = 0.0f;
             Entity.Mass = 10.0f;
             Entity.InvMass = 1 / Entity.Mass;
@@ -375,7 +397,7 @@ CreateEntity(sprites SpriteID, vec2 Position, vec2 Size, glrenderdata *RenderDat
         case SPRITE_WALL:
         {
             sh_glCreateStaticSprite2D({32, 0}, {16, 16}, SpriteID, RenderData);
-            Entity.Flags = IS_STATIC|IS_ACTIVE;
+            Entity.Flags = IS_SOLID|IS_ACTIVE;
             Entity.Restitution = 0.0f;
             Entity.Mass = 10.0f;
             Entity.InvMass = 1 / Entity.Mass;
@@ -467,11 +489,6 @@ GAME_ON_AWAKE(GameOnAwake)
     //sh_FMODPlaySoundFX(AudioSubsystem->SoundFX[SFX_TEST]);
 }
 
-internal void
-sh_PhysicsLerp(real32 DeltaTime)
-{
-}
-
 // Position / Time = Velocity;
 // Velocity / Time = Acceleration;
 // Acceleration / Time = Impluse;
@@ -483,24 +500,81 @@ sh_PhysicsLerp(real32 DeltaTime)
 
 // Velocity = A * T
 // F = ma
+
+// (0.5 * A * T^2) + V * T + pP;
+
 // NOTE(Sleepster): Get the acceleration, then find the force using said acceleration. Add the force to the position.
 
 extern "C"
 GAME_FIXED_UPDATE(GameFixedUpdate)
 {
+    entity *Player = &State->Entities[1];
+    real32 MaxSpeed = 2.0f;
+    
+    if(IsGameKeyDown(MOVE_UP, &State->GameInput))
+    {
+        Player->Acceleration.y = -1.0f * Time.DeltaTime;
+    }
+    
+    if(IsGameKeyDown(MOVE_DOWN, &State->GameInput))
+    {
+        Player->Acceleration.y = 1.0f * Time.DeltaTime;
+    }
+    
+    if(IsGameKeyDown(MOVE_LEFT, &State->GameInput))
+    {
+        Player->Acceleration.x = -1.0f * Time.DeltaTime;
+    }
+    
+    if(IsGameKeyDown(MOVE_RIGHT, &State->GameInput))
+    {
+        Player->Acceleration.x = 1.0f * Time.DeltaTime;
+    }
+    
+    if(Player->Acceleration.x != 0 && Player->Acceleration.y != 0)
+    {
+        Player->Acceleration *= 0.77f;;
+    }
+    
+    vec2 OldPlayerP = Player->Position;
+    vec2 OldPlayerV = Player->Velocity;
+    
+    // NOTE(Sleepster): ODE here for friction
+    Player->Acceleration += -(0.05f * Player->Velocity);
+    
+    Player->Position = (0.5f * (Player->Acceleration * Square(Time.DeltaTime)) + (Player->Velocity * Time.DeltaTime) + OldPlayerP);
+    Player->Position = v2Lerp(Player->Position, OldPlayerP, Time.DeltaTime);
+    Player->Velocity = (Player->Acceleration * Time.DeltaTime) + OldPlayerV;
+    
+    for(int32 EntityIndex = 1;
+        EntityIndex <= State->CurrentEntityCount;
+        ++EntityIndex)
+    {
+        UpdateEntityColliderData(&State->Entities[EntityIndex]);
+    }
 }
 
 extern "C"
 GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
 {
     RenderData->Cameras[CAMERA_GAME].Position = {130, -60};
-    DrawEntityStaticSprite2D(State->Entities[1], RenderData);
-    HandleCollisions(State);
     
-    for(int32 Index = 2;
-        Index <= State->CurrentEntityCount;
-        ++Index)
+    for(int32 EntityIndex = 2;
+        EntityIndex <= State->CurrentEntityCount;
+        ++EntityIndex)
     {
-        DrawEntityStaticSprite2D(State->Entities[Index], RenderData);
+        gjk_epa_data CollisionData = GJK_EPA(&State->Entities[1], &State->Entities[EntityIndex]);
+        if(CollisionData.Collision)
+        {
+            ResolveSolidCollision(&State->Entities[1], CollisionData);
+        }
     }
+    
+    for(int32 EntityIndex = 1;
+        EntityIndex <= State->CurrentEntityCount;
+        ++EntityIndex)
+    {
+        DrawEntityStaticSprite2D(State->Entities[EntityIndex], RenderData);
+    }
+    DrawEntityStaticSprite2D(State->Entities[1], RenderData);
 }

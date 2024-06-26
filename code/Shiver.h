@@ -21,8 +21,8 @@ enum VertexPositions
 
 enum entityflags
 {
-    IS_STATIC = 0x01,
-    IS_PLAYER = 0x02,
+    IS_SOLID = 0x01,
+    IS_ACTOR = 0x02,
     IS_ACTIVE = 0x03,
     FlagCount
 };
@@ -65,6 +65,7 @@ struct time
     real32 DeltaTime;
     real32 CurrentTime;
     real32 NextTimestep;
+    real32 Alpha;
 };
 
 struct gamestate
