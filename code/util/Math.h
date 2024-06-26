@@ -540,6 +540,14 @@ operator/(ivec2 A, real32 B)
     return(Result);
 }
 
+internal inline ivec2
+operator*=(ivec2 &A, int32 B)
+{
+    A.x = A.x * B;
+    A.y = A.y * B;
+    return(A);
+}
+
 // INTEGER OPERATIONS 
 
 internal inline int64

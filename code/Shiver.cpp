@@ -486,30 +486,13 @@ GAME_ON_AWAKE(GameOnAwake)
     DrawTilemap(Tilemap, RenderData, State);
     
     // NOTE(Sleepster): see about making it so that I can just call the event name to play it?
-    //sh_FMODPlaySoundFX(AudioSubsystem->SoundFX[SFX_TEST]);
+    //sh_FMODPlaySoundFX(AudioSubsystem->SoundFX[TEST_SFX]);
 }
-
-// Position / Time = Velocity;
-// Velocity / Time = Acceleration;
-// Acceleration / Time = Impluse;
-// Impluse = Force * Time :: Impulse = delta A over time
-
-// Position = Velocity * Time;
-// Force = ma
-// A = Force / Mass
-
-// Velocity = A * T
-// F = ma
-
-// (0.5 * A * T^2) + V * T + pP;
-
-// NOTE(Sleepster): Get the acceleration, then find the force using said acceleration. Add the force to the position.
 
 extern "C"
 GAME_FIXED_UPDATE(GameFixedUpdate)
 {
     entity *Player = &State->Entities[1];
-    real32 MaxSpeed = 2.0f;
     
     if(IsGameKeyDown(MOVE_UP, &State->GameInput))
     {
@@ -533,7 +516,7 @@ GAME_FIXED_UPDATE(GameFixedUpdate)
     
     if(Player->Acceleration.x != 0 && Player->Acceleration.y != 0)
     {
-        Player->Acceleration *= 0.77f;;
+        Player->Acceleration *= 0.77f;
     }
     
     vec2 OldPlayerP = Player->Position;
@@ -576,5 +559,4 @@ GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
     {
         DrawEntityStaticSprite2D(State->Entities[EntityIndex], RenderData);
     }
-    DrawEntityStaticSprite2D(State->Entities[1], RenderData);
 }

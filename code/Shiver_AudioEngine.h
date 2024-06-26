@@ -20,7 +20,7 @@ struct fmod_sound_event
 
 enum audiosfx
 {
-    SFX_TEST,
+    TEST_SFX,
     SFX_COUNT
 };
 

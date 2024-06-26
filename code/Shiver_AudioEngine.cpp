@@ -90,7 +90,7 @@ sh_LoadFMODStudioBankData(fmod_sound_subsystem_data *FMODSubsystemData, const ch
 internal inline void
 sh_FMODStudioLoadSFXData(fmod_sound_subsystem_data *FMODSubsystemData, fmod_sound_event *SoundEffects)
 {
-    FMOD_Studio_System_GetEvent(FMODSubsystemData->StudioSystem, "event:/Test", &SoundEffects[SFX_TEST].EventDesc);
+    FMOD_Studio_System_GetEvent(FMODSubsystemData->StudioSystem, "event:/Test", &SoundEffects[TEST_SFX].EventDesc);
 }
 
 internal void 
