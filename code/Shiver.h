@@ -7,9 +7,7 @@
 #include "Shiver_Input.h"
 #include "Shiver_Renderer.h"
 #include "Shiver_AudioEngine.h"
-
-#define WORLD_WIDTH 160
-#define WORLD_HEIGHT 90
+#include "Shiver_Globals.h"
 
 enum VertexPositions
 {

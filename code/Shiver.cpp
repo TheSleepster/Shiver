@@ -1,14 +1,12 @@
 #include "Intrinsics.h"
 #include "Shiver.h"
 
-#define TILEMAP_SIZE_X 17
-#define TILEMAP_SIZE_Y 9
+// Solving order
+// - Do Caveman
+// - Wait until performance :(
+// - Fix with less Caveman
+// - Unga bunga
 
-#define TILESIZE 16
-#define STATIC_MASS 10000
-
-#define GJK_TOLERANCE 0.00001
-#define EPSILON 0.05
 
 // NOTE(Sleepster): The Simplex is no longer just 3 points since we are now using EPA for the distance and normal calculations
 //                  Won't be a dynamic buffer, if you have more than 128 verts what the shit are you doing? Change this then.
@@ -200,7 +198,7 @@ GJK_FurthestPoint(entity *Entity, vec2 Direction)
     real32 MaxProduct = v2Dot(Entity->Vertex[0], Direction);
     vec2 Result = {};
     for(int Point = 1; 
-        Point < Entity->VertexCount; 
+        Point < Entity->VertexCount;
         ++Point) 
     { 
         real32 Product = v2Dot(Entity->Vertex[Point], Direction); 
@@ -473,7 +471,7 @@ GAME_ON_AWAKE(GameOnAwake)
         {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
         {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
         {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
-        {1,0,0,0, 1,1,1,1, 0,1,1,0, 0,0,0,0, 1},
+        {1,0,0,0, 1,1,1,0, 0,1,1,0, 0,0,0,0, 1},
         {1,0,0,0, 1,0,0,0, 0,0,1,0, 0,0,0,0, 1},
         {1,0,0,0, 1,0,0,0, 0,0,1,0, 0,0,0,0, 1},
         {1,0,0,0, 1,0,0,0, 0,0,1,0, 0,0,0,0, 1},

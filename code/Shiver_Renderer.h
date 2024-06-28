@@ -8,9 +8,7 @@
 #include "util/Math.h"
 
 // DEFINES
-#define MAX_TRANSFORMS 10000
-#define SIMRATE ((1.0f/90.0f)*1000)
-#define RENDERRATE ((1.0f/144.0f)*1000)
+#include "Shiver_Globals.h"
 
 #include "OpenGL/GLL.h"
 #include "OpenGL/glcorearb.h"
