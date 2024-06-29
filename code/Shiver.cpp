@@ -7,7 +7,6 @@
 // - Fix with less Caveman
 // - Unga bunga
 
-
 // NOTE(Sleepster): The Simplex is no longer just 3 points since we are now using EPA for the distance and normal calculations
 //                  Won't be a dynamic buffer, if you have more than 128 verts what the shit are you doing? Change this then.
 struct simplex

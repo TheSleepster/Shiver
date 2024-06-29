@@ -23,7 +23,6 @@
     - Upload with WebAssembly
 */
 
-
 // NOTE(Sleepster): If the types look weird check this file. Because they are weird.
 #include "Intrinsics.h"
 
@@ -31,24 +30,22 @@
 #include <windows.h>
 
 // ENGINE UTILS
-#include "../data/shader/Shiver_SharedShaderHeader.h"
 #include "util/MemoryArena.h"
 #include "util/Math.h"
-#include "util/ShiverArray.h"
 
 // OPENGL
-#include "OpenGL/GLL.h"
-#include "OpenGL/glcorearb.h"
-#include "OpenGL/glext.h"
-#include "OpenGL/wglext.h"
+#include "../data/deps/OpenGL/GLL.h"
+#include "../data/deps/OpenGL/glcorearb.h"
+#include "../data/deps/OpenGL/glext.h"
+#include "../data/deps/OpenGL/wglext.h"
 
 // FMOD 
-#include "FMOD/fmod.h"
-#include "FMOD/fmod_common.h"
+#include "../data/deps/FMOD/fmod.h"
+#include "../data/deps/FMOD/fmod_common.h"
 
 // FMOD STUDIO
-#include "FMOD/fmod_studio.h"
-#include "FMOD/fmod_studio_common.h"
+#include "../data/deps/FMOD/fmod_studio.h"
+#include "../data/deps/FMOD/fmod_studio_common.h"
 
 // ENGINE HEADERS
 #include "Win32_Shiver.h"
@@ -164,7 +161,6 @@ Win32LoadGameCode(const char *SourceDLLName)
     {
         Result.UnlockedUpdate= (game_update_and_render *)
             GetProcAddress(Result.GameCodeDLL, "GameUnlockedUpdate");
-        
         Result.FixedUpdate = (game_fixed_update *)
             GetProcAddress(Result.GameCodeDLL, "GameFixedUpdate");
         Result.OnAwake = (game_on_awake *)
@@ -333,7 +329,7 @@ WinMain(HINSTANCE hInstance,
         if(WindowHandle)
         {
             HDC WindowDC = GetDC(WindowHandle);
-            
+
             LARGE_INTEGER LastCounter;
             QueryPerformanceCounter(&LastCounter);
             
@@ -383,11 +379,9 @@ WinMain(HINSTANCE hInstance,
             // VSYNC
             WGLFunctions.wglSwapIntervalEXT(0);
             // VSYNC
-            
             InitializeOpenGLRendererData(&RenderData, &TransientStorage);
             win32gamecode Game = Win32LoadGameCode("ShiverGame.dll");
-            
-            
+
             // SOUND
             fmod_sound_subsystem_data FMODSubsystemData;
             fmod_sound_event TestEvent = {};
@@ -450,6 +444,7 @@ WinMain(HINSTANCE hInstance,
                     Game.FixedUpdate(&State, &RenderData, Time);
                     FMOD_System_Update(FMODSubsystemData.CoreSystem);
                     FMOD_Studio_System_Update(FMODSubsystemData.StudioSystem);
+
                     Accumulator -= Time.DeltaTime;
                 }
                 Time.Alpha = Accumulator / Time.DeltaTime;
@@ -459,8 +454,7 @@ WinMain(HINSTANCE hInstance,
                 Game.UnlockedUpdate(&State, &RenderData, &FMODSubsystemData, Time);
                 
                 // TODO(Sleepster): Maybe lock this to a frametimer?
-                sh_glRender(&WindowData, WindowHandle, &RenderData, &TransientStorage);
-                
+                sh_glRender(&WindowData, WindowHandle, &RenderData, &TransientStorage); 
                 
                 RenderData.TransformCounter = 0;
                 TransientStorage.Used = 0;

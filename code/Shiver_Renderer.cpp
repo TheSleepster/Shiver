@@ -4,14 +4,14 @@
 #include "Shiver.h"
 
 // OPENGL
-#include "OpenGL/GLL.h"
-#include "OpenGL/glcorearb.h"
-#include "OpenGL/glext.h"
-#include "OpenGL/wglext.h"
+#include "../data/deps/OpenGL/GLL.h"
+#include "../data/deps/OpenGL/glcorearb.h"
+#include "../data/deps/OpenGL/glext.h"
+#include "../data/deps/OpenGL/wglext.h"
 
 // STB IMAGE TEXTURE LOADING
 #define STB_IMAGE_IMPLEMENTATION
-#include "stbimage/stb_image.h"
+#include "../data/deps/stbimage/stb_image.h"
 
 // GAME HEADERS
 #include "Win32_Shiver.h"
@@ -307,10 +307,9 @@ sh_glRender(win32windowdata *WindowData, HWND WindowHandle, glrenderdata *Render
     glClearColor(0.1f, 0.0f, 1.0f, 1.0f);
     glClearDepth(0.0f);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-    
-    vec2 WindowSize = {(real32)WindowData->SizeData.Width, (real32)WindowData->SizeData.Height};
     glViewport(0, 0, WindowData->SizeData.Width, WindowData->SizeData.Height);
-    
+
+    vec2 WindowSize = {(real32)WindowData->SizeData.Width, (real32)WindowData->SizeData.Height};
     glUniform2fv(RenderData->ScreenSizeID, 1, &WindowSize.x);
     
     vec4 CameraInfo = 

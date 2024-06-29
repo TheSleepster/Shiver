@@ -10,10 +10,10 @@
 // DEFINES
 #include "Shiver_Globals.h"
 
-#include "OpenGL/GLL.h"
-#include "OpenGL/glcorearb.h"
-#include "OpenGL/glext.h"
-#include "OpenGL/wglext.h"
+#include "../data/deps/OpenGL/GLL.h"
+#include "../data/deps/OpenGL/glcorearb.h"
+#include "../data/deps/OpenGL/glext.h"
+#include "../data/deps/OpenGL/wglext.h"
 
 enum ShaderPrograms
 {
