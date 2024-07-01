@@ -155,13 +155,14 @@ sh_glLoadExistingTexture(const char *Filepath, texture2d TextureInfo)
 
 
 internal glshaderprogram
-sh_glCreateShader(int32 ShaderType, char *Filepath, MemoryArena *Memory)
+sh_glCreateShader(int32 ShaderType, char *Filepath)
 {
     uint32 FileSize = 0;
     glshaderprogram ReturnShader = {};
+    MemoryArena Scratch = MakeMemoryArena(Kilobytes(200));
     
-    char *ShaderHeader = ReadEntireFileMA("shader/Shiver_SharedShaderHeader.h", &FileSize, Memory);
-    char *ShaderSource = ReadEntireFileMA(Filepath, &FileSize, Memory);
+    char *ShaderHeader = ReadEntireFileMA("shader/Shiver_SharedShaderHeader.h", &FileSize, &Scratch);
+    char *ShaderSource = ReadEntireFileMA(Filepath, &FileSize, &Scratch);
     
     ReturnShader.Filepath = Filepath;
     ReturnShader.LastWriteTime = Win32GetLastWriteTime(Filepath); 
@@ -220,16 +221,17 @@ InitializeOpenGLRendererData(glrenderdata *RenderData, MemoryArena *TransientSto
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
     glEnable(GL_DEBUG_OUTPUT);
     
-    // Shader Setup
+    /////////////////////////////
+    // NOTE(Sleepster): Shader setup
     {
         RenderData->Shaders[BASIC].VertexShader.Filepath = "shader/Basic.vert";
         RenderData->Shaders[BASIC].FragmentShader.Filepath = "shader/Basic.frag";
         
         RenderData->Shaders[BASIC].VertexShader = 
-            sh_glCreateShader(GL_VERTEX_SHADER, RenderData->Shaders[BASIC].VertexShader.Filepath, TransientStorage);
+            sh_glCreateShader(GL_VERTEX_SHADER, RenderData->Shaders[BASIC].VertexShader.Filepath);
         
         RenderData->Shaders[BASIC].FragmentShader = 
-            sh_glCreateShader(GL_FRAGMENT_SHADER, RenderData->Shaders[BASIC].FragmentShader.Filepath, TransientStorage);
+            sh_glCreateShader(GL_FRAGMENT_SHADER, RenderData->Shaders[BASIC].FragmentShader.Filepath);
         
         RenderData->Shaders[BASIC] = 
             sh_glCreateProgram(RenderData->Shaders[BASIC].VertexShader, RenderData->Shaders[BASIC].FragmentShader);
@@ -275,6 +277,8 @@ InitializeOpenGLRendererData(glrenderdata *RenderData, MemoryArena *TransientSto
 internal void
 sh_glRender(win32windowdata *WindowData, HWND WindowHandle, glrenderdata *RenderData, MemoryArena *Memory)
 {
+    //////////////////////
+    // NOTE(Sleepster): Shader and texture reloading
 #if SHIVER_SLOW
     FILETIME NewTextureWriteTime = Win32GetLastWriteTime(RenderData->Textures[TEXTURE_GAME_ATLAS].Filepath);
     FILETIME NewVertexShaderWriteTime = Win32GetLastWriteTime(RenderData->Shaders[BASIC].VertexShader.Filepath);
@@ -291,10 +295,10 @@ sh_glRender(win32windowdata *WindowData, HWND WindowHandle, glrenderdata *Render
        CompareFileTime(&NewFragmentShaderWriteTime, &RenderData->Shaders[BASIC].FragmentShader.LastWriteTime) != 0)
     {
         RenderData->Shaders[BASIC].VertexShader = 
-            sh_glCreateShader(GL_VERTEX_SHADER, RenderData->Shaders[BASIC].VertexShader.Filepath, Memory);
+            sh_glCreateShader(GL_VERTEX_SHADER, RenderData->Shaders[BASIC].VertexShader.Filepath);
         
         RenderData->Shaders[BASIC].FragmentShader = 
-            sh_glCreateShader(GL_FRAGMENT_SHADER, RenderData->Shaders[BASIC].FragmentShader.Filepath, Memory);
+            sh_glCreateShader(GL_FRAGMENT_SHADER, RenderData->Shaders[BASIC].FragmentShader.Filepath);
         
         RenderData->Shaders[BASIC] = 
             sh_glCreateProgram(RenderData->Shaders[BASIC].VertexShader, RenderData->Shaders[BASIC].FragmentShader);
@@ -303,12 +307,14 @@ sh_glRender(win32windowdata *WindowData, HWND WindowHandle, glrenderdata *Render
         Sleep(100);
     }
 #endif
+    ///////////////////////
+    // NOTE(Sleepster): Actual renderering
     HDC WindowDC = GetDC(WindowHandle);
     glClearColor(0.1f, 0.0f, 1.0f, 1.0f);
     glClearDepth(0.0f);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     glViewport(0, 0, WindowData->SizeData.Width, WindowData->SizeData.Height);
-
+    
     vec2 WindowSize = {(real32)WindowData->SizeData.Width, (real32)WindowData->SizeData.Height};
     glUniform2fv(RenderData->ScreenSizeID, 1, &WindowSize.x);
     

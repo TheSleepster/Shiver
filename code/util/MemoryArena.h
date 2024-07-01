@@ -4,20 +4,21 @@
 // NOTE(Sleepster): Still have no idea if this freelist Idea actually works
 struct FreeList 
 {
+    char *FreeMemory;
     struct FreeList *NextChunk;
 };
 
 struct MemoryArena 
 {
-    size_t Capacity;
-    size_t Used;
+    uint64 Capacity;
+    uint64 Used;
     char* Memory;
     
     FreeList *FreeList;
 };
 
 internal inline MemoryArena 
-MakeMemoryArena(size_t Size) 
+MakeMemoryArena(uint64 Size) 
 {
     MemoryArena MemoryArena = {};
     MemoryArena.Memory = (char *)malloc(Size);
@@ -32,16 +33,16 @@ MakeMemoryArena(size_t Size)
 
 // TODO(Sleepster): Check that the allignment size is actually correct
 internal inline char *
-ArenaAlloc(MemoryArena *MemoryArena, size_t Size) 
+ArenaAlloc(MemoryArena *MemoryArena, uint64 Size) 
 {
     char *Result = nullptr;
-    size_t AllignedSize = (Size + 7) & ~ 7;
+    uint64 AllignedSize = (Size + 7) & ~ 7;
     if(MemoryArena->FreeList) 
     {
         FreeList *Chunk = MemoryArena->FreeList;
         MemoryArena->FreeList = Chunk->NextChunk;
         
-        return((char *)Chunk);
+        return((char *)Chunk->FreeMemory);
     }
     
     if(MemoryArena->Used + AllignedSize <= MemoryArena->Capacity) 

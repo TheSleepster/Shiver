@@ -329,13 +329,14 @@ WinMain(HINSTANCE hInstance,
         if(WindowHandle)
         {
             HDC WindowDC = GetDC(WindowHandle);
-
+            
             LARGE_INTEGER LastCounter;
             QueryPerformanceCounter(&LastCounter);
             
             // MEMORY STUFF
-            MemoryArena TransientStorage = MakeMemoryArena(Megabytes(3));
-            MemoryArena PermanentStorage = MakeMemoryArena(Megabytes(3));
+            game_memory GameMemory = {};
+            GameMemory.TransientStorage = MakeMemoryArena(Megabytes(3));
+            GameMemory.PermanentStorage = MakeMemoryArena(Megabytes(3));
             // MEMORY STUFF
             
             const int PixelAttributes[] = 
@@ -379,9 +380,9 @@ WinMain(HINSTANCE hInstance,
             // VSYNC
             WGLFunctions.wglSwapIntervalEXT(0);
             // VSYNC
-            InitializeOpenGLRendererData(&RenderData, &TransientStorage);
+            InitializeOpenGLRendererData(&RenderData, &GameMemory.TransientStorage);
             win32gamecode Game = Win32LoadGameCode("ShiverGame.dll");
-
+            
             // SOUND
             fmod_sound_subsystem_data FMODSubsystemData;
             fmod_sound_event TestEvent = {};
@@ -394,7 +395,7 @@ WinMain(HINSTANCE hInstance,
             real32 Accumulator = 0;
             GlobalRunning = true;
             
-            Game.OnAwake(&State, &RenderData, &FMODSubsystemData);
+            Game.OnAwake(&State, &RenderData, &FMODSubsystemData, &GameMemory);
             
             while(GlobalRunning)
             {
@@ -407,7 +408,7 @@ WinMain(HINSTANCE hInstance,
                     Win32UnloadGameCode(&Game);
                     Game = Win32LoadGameCode(SourceDLLName);
                     
-                    Game.OnAwake(&State, &RenderData, &FMODSubsystemData);
+                    Game.OnAwake(&State, &RenderData, &FMODSubsystemData, &GameMemory);
                 }
                 
                 // NOTE(Sleepster): HOT RELOADING FMOD SOUND BANKS
@@ -441,23 +442,24 @@ WinMain(HINSTANCE hInstance,
                 // FIXED UPDATE (From DeltaTime)
                 while(Accumulator >= SIMRATE)
                 {
-                    Game.FixedUpdate(&State, &RenderData, Time);
+                    Game.FixedUpdate(&State, &RenderData, Time, &GameMemory);
                     FMOD_System_Update(FMODSubsystemData.CoreSystem);
                     FMOD_Studio_System_Update(FMODSubsystemData.StudioSystem);
-
+                    
                     Accumulator -= Time.DeltaTime;
                 }
                 Time.Alpha = Accumulator / Time.DeltaTime;
                 
                 
                 // UPDATE GAME (Framerate Independant)
-                Game.UnlockedUpdate(&State, &RenderData, &FMODSubsystemData, Time);
+                Game.UnlockedUpdate(&State, &RenderData, &FMODSubsystemData, Time, &GameMemory);
                 
                 // TODO(Sleepster): Maybe lock this to a frametimer?
-                sh_glRender(&WindowData, WindowHandle, &RenderData, &TransientStorage); 
+                sh_glRender(&WindowData, WindowHandle, &RenderData, &GameMemory.TransientStorage); 
                 
                 RenderData.TransformCounter = 0;
-                TransientStorage.Used = 0;
+                GameMemory.TransientStorage.Used = 0;
+                GameMemory.TransientStorage.Memory = {};
                 
                 // UPDATE DELTA TIME
                 LARGE_INTEGER EndCounter;

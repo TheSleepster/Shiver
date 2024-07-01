@@ -1,5 +1,6 @@
 #include "Intrinsics.h"
 #include "Shiver.h"
+#include "util/ShiverArray.h"
 
 // Solving order
 // - Do Caveman
@@ -370,14 +371,13 @@ UpdateEntityColliderData(entity *Entity)
 
 // TODO(Sleepster): Make it so that we are not making a new sprite every frame, only when we need to actually make it
 internal entity
-CreateEntity(sprites SpriteID, vec2 Position, vec2 Size, glrenderdata *RenderData, gamestate *State)
+CreateEntity(static_sprites SpriteID, vec2 Position, vec2 Size, glrenderdata *RenderData, gamestate *State)
 {
     entity Entity = {};
     switch(SpriteID)
     {
         case SPRITE_DICE:
         {
-            sh_glCreateStaticSprite2D({0, 0}, {16, 16}, SpriteID, RenderData);
             Entity.Flags = IS_ACTOR|IS_ACTIVE;
             Entity.Restitution = 0.0f;
             Entity.Mass = 100.0f;
@@ -385,7 +385,6 @@ CreateEntity(sprites SpriteID, vec2 Position, vec2 Size, glrenderdata *RenderDat
         }break;
         case SPRITE_FLOOR:
         {
-            sh_glCreateStaticSprite2D({16, 0}, {16, 16}, SpriteID, RenderData);
             Entity.Flags = IS_SOLID|IS_ACTIVE;
             Entity.Restitution = 0.0f;
             Entity.Mass = 10.0f;
@@ -393,7 +392,6 @@ CreateEntity(sprites SpriteID, vec2 Position, vec2 Size, glrenderdata *RenderDat
         }break;
         case SPRITE_WALL:
         {
-            sh_glCreateStaticSprite2D({32, 0}, {16, 16}, SpriteID, RenderData);
             Entity.Flags = IS_SOLID|IS_ACTIVE;
             Entity.Restitution = 0.0f;
             Entity.Mass = 10.0f;
@@ -402,7 +400,7 @@ CreateEntity(sprites SpriteID, vec2 Position, vec2 Size, glrenderdata *RenderDat
     }
     
     Entity.SpriteID = SpriteID;
-    Entity.Sprite = sh_glGetSprite(SpriteID, RenderData);
+    Entity.Sprite = RenderData->StaticSprites[SpriteID];
     Entity.Position = Position;
     Entity.Size = Size;
     
@@ -419,11 +417,7 @@ CreateEntity(sprites SpriteID, vec2 Position, vec2 Size, glrenderdata *RenderDat
 internal inline void
 DrawEntityStaticSprite2D(entity Entity, glrenderdata *RenderData)
 {
-    if(Entity.SpriteID != SPRITE_NULL)
-    {
-        sh_glDrawStaticSprite2D(Entity.SpriteID, Entity.Position, iv2Cast(Entity.Size), RenderData);
-    }
-    return;
+    sh_glDrawStaticSprite2D(Entity.SpriteID, Entity.Position, iv2Cast(Entity.Size), RenderData);
 }
 
 internal inline entity
@@ -436,8 +430,6 @@ DeleteEntity(void)
 internal void
 DrawTilemap(const uint8 Tilemap[TILEMAP_SIZE_Y][TILEMAP_SIZE_X], glrenderdata *RenderData, gamestate *State)
 {
-    sh_glCreateStaticSprite2D({16, 0}, {16, 16}, SPRITE_FLOOR, RenderData);
-    sh_glCreateStaticSprite2D({32, 0}, {16, 16}, SPRITE_WALL, RenderData);
     for(int32 Row = 0;
         Row < TILEMAP_SIZE_Y;
         ++Row)
@@ -476,6 +468,8 @@ GAME_ON_AWAKE(GameOnAwake)
         {1,0,0,0, 1,0,0,0, 0,0,1,0, 0,0,0,0, 1},
         {1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1}
     };
+    
+    sh_glLoadSpriteSheet(RenderData);
     
     State->Entities[0] = {};
     State->CurrentEntityCount = 0;
@@ -550,6 +544,7 @@ GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
         }
     }
     
+    // NOTE(Sleepster): Move this out of here? Seems a little odd the game would be doing the rendering
     for(int32 EntityIndex = 1;
         EntityIndex <= State->CurrentEntityCount;
         ++EntityIndex)

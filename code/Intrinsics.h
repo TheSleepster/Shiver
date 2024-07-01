@@ -27,6 +27,9 @@
 
 #define ArrayCount(Array) (sizeof(Array) / sizeof(Array[0]))
 
+#define Min(A, B) ((A < B) ? (A) : (B))
+#define Max(A, B) ((A > B)) ? (A) : (B))
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>

@@ -11,9 +11,6 @@
 #include "Shiver_Globals.h"
 
 #include "../data/deps/OpenGL/GLL.h"
-#include "../data/deps/OpenGL/glcorearb.h"
-#include "../data/deps/OpenGL/glext.h"
-#include "../data/deps/OpenGL/wglext.h"
 
 enum ShaderPrograms
 {
@@ -28,7 +25,7 @@ enum GlRendererTextures
     TEXTURE_COUNT
 };
 
-enum sprites
+enum static_sprites
 {
     SPRITE_NULL,
     SPRITE_DICE,
@@ -75,7 +72,7 @@ struct shader
     GLuint Shader;
 };
 
-struct spritedata
+struct static_sprite_data
 {
     ivec2 AtlasOffset;
     ivec2 SpriteSize;
@@ -101,44 +98,14 @@ struct glrenderdata
     
     shader Shaders[1];
     
-    spritedata Sprites[20];
+    static_sprite_data StaticSprites[20];
     texture2d Textures[31];
     
     orthocamera2d Cameras[3];
 };
 
-internal inline void 
-sh_glCreateStaticSprite2D(ivec2 AtlasOffset, ivec2 SpriteSize, 
-                          sprites SpriteID, glrenderdata *RenderData)
-{
-    spritedata Result = {};
-    
-    Result.AtlasOffset = AtlasOffset;
-    Result.SpriteSize = SpriteSize;
-    
-    RenderData->Sprites[SpriteID] = Result;
-}
-
-internal inline spritedata
-sh_glGetSprite(sprites SpriteID, glrenderdata *RenderData)
-{
-    spritedata Result = RenderData->Sprites[SpriteID];
-    return(Result);
-}
-
-internal void
-sh_glDrawStaticSprite2D(sprites SpriteID, vec2 Position, ivec2 Size, glrenderdata *RenderData)
-{
-    spritedata SpriteData = sh_glGetSprite(SpriteID, RenderData);
-    
-    renderertransform Transform  = {};
-    Transform.AtlasOffset = SpriteData.AtlasOffset;
-    Transform.SpriteSize = SpriteData.SpriteSize;
-    Transform.Size = v2Cast(Size);
-    Transform.WorldPosition = Position - (Transform.Size / 2);
-    RenderData->RendererTransforms[RenderData->TransformCounter++] = Transform;
-}
-
+///////////////////////////////////////////////////
+// NOTE(Sleepster): Matrix stuffs
 internal mat4
 CreateOrthographicMatrix(vec4 Data)
 {
@@ -155,5 +122,4 @@ CreateOrthographicMatrix(vec4 Data)
     
     return(Result);
 }
-
 #endif //_SHIVER__RENDERER_H
