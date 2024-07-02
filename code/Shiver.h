@@ -9,7 +9,7 @@
 #include "Shiver_AudioEngine.h"
 #include "Shiver_Globals.h"
 
-enum VertexPositions
+enum vertex_positions
 {
     TOP_LEFT,
     TOP_RIGHT,
@@ -17,11 +17,19 @@ enum VertexPositions
     BOTTOM_RIGHT
 };
 
+enum collider_type
+{
+    POLYGON,
+    CIRCLE,
+    ELIPSE,
+};
+
 enum entityflags
 {
-    IS_SOLID = 0x01,
-    IS_ACTOR = 0x02,
-    IS_ACTIVE = 0x03,
+    IS_SOLID      = 1 << 0,
+    IS_ACTOR      = 1 << 1,
+    IS_BACKGROUND = 1 << 2,
+    IS_ACTIVE     = 1 << 3,
     FlagCount
 };
 
@@ -29,6 +37,7 @@ enum entityflags
 struct entity
 {
     uint32 Flags;
+    uint32 ColliderType;
     
     static_sprites SpriteID;
     static_sprite_data Sprite;
@@ -38,7 +47,7 @@ struct entity
     vec2 Velocity;
     vec2 Acceleration;
     vec2 AppliedForce;
-    vec2 Vertex[4];
+    vec2 Vertex[MAX_COLLIDER_VERTS];
     
     int32 VertexCount;
     

@@ -12,7 +12,7 @@
 //                  Won't be a dynamic buffer, if you have more than 128 verts what the shit are you doing? Change this then.
 struct simplex
 {
-    vec2 Vertex[128];
+    vec2 Vertex[MAX_SIMPLEX_VERTS];
     int32 VertexCount;
 };
 
@@ -36,6 +36,9 @@ struct epa_edge
     real32 Distance;
 };
 
+// TODO(Sleepster): WATCH HANDMADE HERO COLLISION STUFF
+
+
 // TODO(Sleepster): Make it so that instead of checking all 8 directions, we only check 4 (North, South, East, West)
 // TODO(Sleepster): This breaks with VSYNC btw. Fix that.
 internal void
@@ -45,20 +48,21 @@ ResolveSolidCollision(entity *A, gjk_epa_data Data)
     
     if(Data.CollisionNormal.y == 1)
     {
-        A->Position.y += (real32)EPSILON;
+        A->Position.y += -(real32)EPSILON;
     }
     else if(Data.CollisionNormal.y == -1)
     {
-        A->Position.y += -(real32)EPSILON;
+        A->Position.y += (real32)EPSILON;
+        A->Velocity.x = 0;
     }
     
     if(Data.CollisionNormal.x == 1)
     {
-        A->Position.x += (real32)EPSILON;
+        A->Position.x += -(real32)EPSILON;
     }
     else if(Data.CollisionNormal.x == -1)
     {
-        A->Position.x += -(real32)EPSILON;
+        A->Position.x += (real32)EPSILON;
     }
     
     A->Velocity = {0.0f, 0.0f};
@@ -266,7 +270,7 @@ EPA_AddToSimplex(simplex *Simplex, vec2 Point, int32 InsertionIndex)
 {
     if(Simplex->VertexCount >= ArrayCount(Simplex->Vertex))
     {
-        Assert(false, "Bro how the hell do you have more than 128 vertices?? Check the header to change the simplex array size!\n");
+        Assert(false, "Simplex has grown too large to handle\n");
     }
     for(int32 VertexIndex = Simplex->VertexCount - 1;
         VertexIndex >= InsertionIndex;
@@ -335,8 +339,8 @@ GJK_EPA(entity *A, entity *B)
             if(FloatDistance - Edge.Distance < GJK_TOLERANCE)
             {
                 // NOTE(Sleepster): Invert the edge normal so that it is pointing towards our Minkowski Difference's origin
-                CollisionInfo.CollisionNormal = v2Invert(Edge.Normal);
-                CollisionInfo.Depth = FloatDistance + EPSILON;
+                CollisionInfo.CollisionNormal = Edge.Normal;
+                CollisionInfo.Depth = FloatDistance;
                 break;
             }
             else 
@@ -385,7 +389,7 @@ CreateEntity(static_sprites SpriteID, vec2 Position, vec2 Size, glrenderdata *Re
         }break;
         case SPRITE_FLOOR:
         {
-            Entity.Flags = IS_SOLID|IS_ACTIVE;
+            Entity.Flags = IS_BACKGROUND|IS_ACTIVE;
             Entity.Restitution = 0.0f;
             Entity.Mass = 10.0f;
             Entity.InvMass = 1 / Entity.Mass;
@@ -442,6 +446,8 @@ DrawTilemap(const uint8 Tilemap[TILEMAP_SIZE_Y][TILEMAP_SIZE_X], glrenderdata *R
             {
                 case 0:
                 {
+                    State->Entities[State->CurrentEntityCount] = 
+                        CreateEntity(SPRITE_FLOOR, {real32(Column * TILESIZE), real32(Row * TILESIZE)}, {16, 16}, RenderData, State);
                 }break;
                 case 1:
                 {
@@ -458,10 +464,10 @@ GAME_ON_AWAKE(GameOnAwake)
 {
     const uint8 Tilemap[TILEMAP_SIZE_Y][TILEMAP_SIZE_X] = 
     {
-        {0,0,0,0, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1},
-        {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
-        {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
-        {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
+        {1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1},
+        {1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
+        {1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
+        {1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
         {1,0,0,0, 1,1,1,0, 0,1,1,0, 0,0,0,0, 1},
         {1,0,0,0, 1,0,0,0, 0,0,1,0, 0,0,0,0, 1},
         {1,0,0,0, 1,0,0,0, 0,0,1,0, 0,0,0,0, 1},
@@ -537,10 +543,13 @@ GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
         EntityIndex <= State->CurrentEntityCount;
         ++EntityIndex)
     {
-        gjk_epa_data CollisionData = GJK_EPA(&State->Entities[1], &State->Entities[EntityIndex]);
-        if(CollisionData.Collision)
+        if((State->Entities[EntityIndex].Flags & IS_SOLID))
         {
-            ResolveSolidCollision(&State->Entities[1], CollisionData);
+            gjk_epa_data CollisionData = GJK_EPA(&State->Entities[1], &State->Entities[EntityIndex]);
+            if(CollisionData.Collision)
+            {
+                ResolveSolidCollision(&State->Entities[1], CollisionData);
+            }
         }
     }
     

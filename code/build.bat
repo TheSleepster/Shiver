@@ -11,7 +11,6 @@ Set CommonLinkerFlags=-incremental:no kernel32.lib user32.lib gdi32.lib opengl32
 IF NOT EXIST ..\build mkdir ..\build
 pushd ..\build
 del *.pdb
-del *.rdi
 cl %opts% ../code/Win32_Shiver.cpp -I"../data/deps" %CommonCompilerFlags% -MT -link %CommonLinkerFlags% -OUT:"Shiver.exe" 
 cl %opts% ../code/Shiver.cpp -I"../data/deps" %CommonCompilerFlags% -MT -LD -link "../data/deps/FMOD/fmodL_vc.lib" "../data/deps/FMOD/fmodstudioL_vc.lib" -incremental:no -PDB:Shiver_%RANDOM%.pdb -EXPORT:GameUnlockedUpdate -EXPORT:GameFixedUpdate -EXPORT:GameOnAwake -OUT:"../data/ShiverGame.dll"
 popd

@@ -310,7 +310,7 @@ sh_glRender(win32windowdata *WindowData, HWND WindowHandle, glrenderdata *Render
     ///////////////////////
     // NOTE(Sleepster): Actual renderering
     HDC WindowDC = GetDC(WindowHandle);
-    glClearColor(0.1f, 0.0f, 1.0f, 1.0f);
+    glClearColor(0.1f, 0.6f, 1.0f, 1.0f);
     glClearDepth(0.0f);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     glViewport(0, 0, WindowData->SizeData.Width, WindowData->SizeData.Height);
