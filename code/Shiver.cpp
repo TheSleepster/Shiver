@@ -36,11 +36,7 @@ struct epa_edge
     real32 Distance;
 };
 
-// TODO(Sleepster): WATCH HANDMADE HERO COLLISION STUFF
-
-
 // TODO(Sleepster): Make it so that instead of checking all 8 directions, we only check 4 (North, South, East, West)
-// TODO(Sleepster): This breaks with VSYNC btw. Fix that.
 internal void
 ResolveSolidCollision(entity *A, gjk_epa_data Data)
 {
@@ -486,8 +482,8 @@ GAME_ON_AWAKE(GameOnAwake)
     //sh_FMODPlaySoundFX(AudioSubsystem->SoundFX[TEST_SFX]);
 }
 
-extern "C"
-GAME_FIXED_UPDATE(GameFixedUpdate)
+internal void
+UpdatePlayerPosition(gamestate *State, time Time)
 {
     entity *Player = &State->Entities[1];
     
@@ -535,6 +531,11 @@ GAME_FIXED_UPDATE(GameFixedUpdate)
 }
 
 extern "C"
+GAME_FIXED_UPDATE(GameFixedUpdate)
+{
+    // NOTE(Sleepster): For some reason a "for" loop being present within this fixedupdate causes the game to break
+}
+extern "C"
 GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
 {
     RenderData->Cameras[CAMERA_GAME].Position = {130, -60};
@@ -549,6 +550,10 @@ GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
             if(CollisionData.Collision)
             {
                 ResolveSolidCollision(&State->Entities[1], CollisionData);
+            }
+            else
+            {
+                UpdatePlayerPosition(State, Time);
             }
         }
     }

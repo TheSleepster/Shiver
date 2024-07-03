@@ -454,7 +454,7 @@ WinMain(HINSTANCE hInstance,
                 // UPDATE GAME (Framerate Independant)
                 Game.UnlockedUpdate(&State, &RenderData, &FMODSubsystemData, Time, &GameMemory);
                 
-                // TODO(Sleepster): Maybe lock this to a frametimer?
+                // TODO(Sleepster): Defer the rendering to a seperate thread so that way we are able to activate VSYNC without breaking everything
                 sh_glRender(&WindowData, WindowHandle, &RenderData, &GameMemory.TransientStorage); 
                 
                 RenderData.TransformCounter = 0;
