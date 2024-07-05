@@ -11,7 +11,9 @@
 
 // STB IMAGE TEXTURE LOADING
 #define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../data/deps/stbimage/stb_image.h"
+#include "../data/deps/stbimage/stb_image_write.h"
 
 // GAME HEADERS
 #include "Win32_Shiver.h"

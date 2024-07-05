@@ -1,5 +1,5 @@
 /*
-    This is not a final layer. (Some) Additional Requirements: 
+    This is not a final layer. (Some) Additional Requirements:
 
     COMPLETE
     - GameInput (Keyboard)
@@ -8,7 +8,7 @@
  - Audio (DirectSound?, SokolAudio?, Or XAudio?)
     - Audio Formats (.WAV exclusively?)
 
-    TODO 
+    TODO
     - Asset Loading (Maybe defer this to the renderer? After all it is the renderer that uses them.)
     - Fullscreen
     - Multithreading
@@ -39,7 +39,7 @@
 #include "../data/deps/OpenGL/glext.h"
 #include "../data/deps/OpenGL/wglext.h"
 
-// FMOD 
+// FMOD
 #include "../data/deps/FMOD/fmod.h"
 #include "../data/deps/FMOD/fmod_common.h"
 
@@ -65,9 +65,9 @@ GetLastTime()
 }
 
 internal inline FILETIME
-Win32MaxFiletime(FILETIME A, FILETIME B) 
+Win32MaxFiletime(FILETIME A, FILETIME B)
 {
-    if(CompareFileTime(&A, &B) != 0) 
+    if(CompareFileTime(&A, &B) != 0)
     {
         return(A);
     }
@@ -75,13 +75,13 @@ Win32MaxFiletime(FILETIME A, FILETIME B)
 }
 
 internal FILETIME
-Win32GetLastWriteTime(const char *Filename) 
+Win32GetLastWriteTime(const char *Filename)
 {
     FILETIME LastWriteTime = {};
     
     WIN32_FIND_DATA FindData;
     HANDLE FindHandle = FindFirstFileA(Filename, &FindData);
-    if(FindHandle != INVALID_HANDLE_VALUE) 
+    if(FindHandle != INVALID_HANDLE_VALUE)
     {
         LastWriteTime = FindData.ftLastWriteTime;
         FindClose(FindHandle);
@@ -93,7 +93,7 @@ Win32GetLastWriteTime(const char *Filename)
 // TODO(Sleepster): GetFileSizeInBytes/ReadEntireFile(MA) are platform agnostic
 //                  Move them to seperate files later. Doesn't matter rn
 internal int32
-GetFileSizeInBytes(const char *Filepath) 
+GetFileSizeInBytes(const char *Filepath)
 {
     int32 FileSize = 0;
     FILE *File = fopen(Filepath, "rb");
@@ -107,7 +107,7 @@ GetFileSizeInBytes(const char *Filepath)
 }
 
 internal char *
-ReadEntireFile(const char *Filepath, uint32 *Size, char *Buffer) 
+ReadEntireFile(const char *Filepath, uint32 *Size, char *Buffer)
 {
     Assert(Filepath != nullptr, "Cannot find the file designated!\n");
     Assert(Buffer != nullptr, "Provide a valid buffer!\n");
@@ -128,9 +128,9 @@ ReadEntireFile(const char *Filepath, uint32 *Size, char *Buffer)
 }
 
 internal char *
-ReadEntireFileMA(const char *Filepath, uint32 *FileSize, MemoryArena *ArenaAllocator) 
+ReadEntireFileMA(const char *Filepath, uint32 *FileSize, MemoryArena *ArenaAllocator)
 {
-    char *File = nullptr; 
+    char *File = nullptr;
     int32 FileSize2 = GetFileSizeInBytes(Filepath);
     Assert(FileSize2 >= 0, "FileSize is less than 0!\n");
     
@@ -190,7 +190,7 @@ Win32UnloadGameCode(win32gamecode *GameCode)
     GameCode->FixedUpdate = GameFixedUpdateStub;
 }
 
-LRESULT CALLBACK 
+LRESULT CALLBACK
 Win32MainWindowCallback(HWND WindowHandle, UINT Message,
                         WPARAM wParam, LPARAM lParam)
 {
@@ -232,7 +232,7 @@ Win32ProcessWindowMessages(MSG Message, HWND WindowHandle, win32windowdata *Wind
             
             case WM_SYSKEYDOWN:
             case WM_SYSKEYUP:
-            case WM_KEYDOWN: 
+            case WM_KEYDOWN:
             case WM_KEYUP:
             {
                 uint32 VKCode = (uint32)Message.wParam;
@@ -247,7 +247,7 @@ Win32ProcessWindowMessages(MSG Message, HWND WindowHandle, win32windowdata *Wind
                 
                 
                 bool AltKeyIsDown = ((Message.lParam & (1 << 29)) != 0);
-                if(VKCode == VK_F4 && AltKeyIsDown) 
+                if(VKCode == VK_F4 && AltKeyIsDown)
                 {
                     GlobalRunning = false;
                 }
@@ -258,7 +258,7 @@ Win32ProcessWindowMessages(MSG Message, HWND WindowHandle, win32windowdata *Wind
             case WM_XBUTTONDOWN:
             case WM_LBUTTONUP:
             case WM_RBUTTONUP:
-            case WM_MBUTTONUP: 
+            case WM_MBUTTONUP:
             case WM_XBUTTONUP:
             {
                 uint32 VKCode = (uint32)Message.wParam;
@@ -279,10 +279,10 @@ Win32ProcessWindowMessages(MSG Message, HWND WindowHandle, win32windowdata *Wind
     }
 }
 
-int CALLBACK 
-WinMain(HINSTANCE hInstance, 
-        HINSTANCE hPrevInstance, 
-        LPSTR lpCmdLine, 
+int CALLBACK
+WinMain(HINSTANCE hInstance,
+        HINSTANCE hPrevInstance,
+        LPSTR lpCmdLine,
         int32 nShowCmd)
 {
     win32openglfunctions WGLFunctions = {};
@@ -314,7 +314,7 @@ WinMain(HINSTANCE hInstance,
         WindowData.SizeData.Width = 1280;
         WindowData.SizeData.Height = 720;
         
-        HWND WindowHandle = 
+        HWND WindowHandle =
             CreateWindow(Window.lpszClassName,
                          "Shiver",
                          WS_OVERLAPPEDWINDOW|WS_VISIBLE,
@@ -339,7 +339,7 @@ WinMain(HINSTANCE hInstance,
             GameMemory.PermanentStorage = MakeMemoryArena(Megabytes(3));
             // MEMORY STUFF
             
-            const int PixelAttributes[] = 
+            const int32 PixelAttributes[] =
             {
                 WGL_DRAW_TO_WINDOW_ARB, GL_TRUE,
                 WGL_SUPPORT_OPENGL_ARB, GL_TRUE,
@@ -353,7 +353,7 @@ WinMain(HINSTANCE hInstance,
                 0
             };
             
-            const int ContextAttributes[] = 
+            const int32 ContextAttributes[] =
             {
                 WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
                 WGL_CONTEXT_MINOR_VERSION_ARB, 3,
@@ -401,6 +401,7 @@ WinMain(HINSTANCE hInstance,
             {
 #if SHIVER_SLOW
                 // NOTE(Sleepster): HOT RELOADING FOR THE GAME CODE
+                
                 const char *SourceDLLName = "ShiverGame.dll";
                 FILETIME NewDLLWriteTime = Win32GetLastWriteTime(SourceDLLName);
                 if(CompareFileTime(&NewDLLWriteTime, &Game.LastWriteTime) != 0)
@@ -443,6 +444,7 @@ WinMain(HINSTANCE hInstance,
                 while(Accumulator >= SIMRATE)
                 {
                     Game.FixedUpdate(&State, &RenderData, Time, &GameMemory);
+                    
                     FMOD_System_Update(FMODSubsystemData.CoreSystem);
                     FMOD_Studio_System_Update(FMODSubsystemData.StudioSystem);
                     
@@ -455,7 +457,7 @@ WinMain(HINSTANCE hInstance,
                 Game.UnlockedUpdate(&State, &RenderData, &FMODSubsystemData, Time, &GameMemory);
                 
                 // TODO(Sleepster): Defer the rendering to a seperate thread so that way we are able to activate VSYNC without breaking everything
-                sh_glRender(&WindowData, WindowHandle, &RenderData, &GameMemory.TransientStorage); 
+                sh_glRender(&WindowData, WindowHandle, &RenderData, &GameMemory.TransientStorage);
                 
                 RenderData.TransformCounter = 0;
                 GameMemory.TransientStorage.Used = 0;

@@ -24,7 +24,7 @@ enum collider_type
     ELIPSE,
 };
 
-enum entityflags
+enum entity_flags
 {
     IS_SOLID      = 1 << 0,
     IS_ACTOR      = 1 << 1,
@@ -47,8 +47,8 @@ struct entity
     vec2 Velocity;
     vec2 Acceleration;
     vec2 AppliedForce;
-    vec2 Vertex[MAX_COLLIDER_VERTS];
     
+    vec2 Vertex[MAX_COLLIDER_VERTS];
     int32 VertexCount;
     
     real32 Mass;

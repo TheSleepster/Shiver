@@ -52,4 +52,13 @@ sh_FMODPlaySoundFX(fmod_sound_event SoundFX)
     FMOD_Studio_EventInstance_Release(SoundFX.EventInstance);
 }
 
+// TODO(Sleepster): Impliment this
+internal inline void
+sh_FMODPlayLoopedSoundFX(fmod_sound_event SoundFX)
+{
+    FMOD_Studio_EventDescription_CreateInstance(SoundFX.EventDesc, &SoundFX.EventInstance);
+    FMOD_Studio_EventInstance_Start(SoundFX.EventInstance);
+    FMOD_Studio_EventInstance_Release(SoundFX.EventInstance);
+}
+
 #endif //_SHIVER__AUDIO_ENGINE_H

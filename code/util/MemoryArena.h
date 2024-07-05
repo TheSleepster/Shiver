@@ -56,7 +56,8 @@ ArenaAlloc(MemoryArena *MemoryArena, uint64 Size)
 internal inline void
 ArenaDealloc(MemoryArena *MemoryArena, void *Data) 
 {
-    FreeList *FreeList = (struct FreeList *)Data;
+    FreeList *FreeList = {};
+    FreeList->FreeMemory = (char *)Data;
     FreeList->NextChunk = MemoryArena->FreeList;
     MemoryArena->FreeList = FreeList;
 }

@@ -192,17 +192,17 @@ GJK_ComputeSimplexData(simplex *Simplex, vec2 *Direction)
 }
 
 internal bool32
-GJK_FurthestPoint(entity *Entity, vec2 Direction) 
-{ 
+GJK_FurthestPoint(entity *Entity, vec2 Direction)
+{
     int BestIndex = 0;
     real32 MaxProduct = v2Dot(Entity->Vertex[0], Direction);
     vec2 Result = {};
-    for(int Point = 1; 
+    for(int Point = 1;
         Point < Entity->VertexCount;
-        ++Point) 
-    { 
-        real32 Product = v2Dot(Entity->Vertex[Point], Direction); 
-        if(Product > MaxProduct) 
+        ++Point)
+    {
+        real32 Product = v2Dot(Entity->Vertex[Point], Direction);
+        if(Product > MaxProduct)
         {
             MaxProduct = Product;
             BestIndex = Point;
@@ -212,7 +212,7 @@ GJK_FurthestPoint(entity *Entity, vec2 Direction)
 }
 
 internal vec2
-GJK_Support(entity *A, entity *B, vec2 Direction) 
+GJK_Support(entity *A, entity *B, vec2 Direction)
 {
     // NOTE(Sleepster): Find the most extreme point on each entity
     int AMax = GJK_FurthestPoint(A, Direction);
@@ -230,7 +230,7 @@ HandleGJK(entity *A, entity *B)
     if(A->VertexCount < 3 || B->VertexCount < 3) return(GJKData);
     
     // NOTE(Sleepster): Initial Point to start with. Initial direction does not matter
-    vec2 iSupportPoint = GJK_Support(A, B, {1, 0}); 
+    vec2 iSupportPoint = GJK_Support(A, B, {1, 0});
     
     simplex Simplex = {};
     Simplex.Vertex[0] = iSupportPoint;
@@ -313,7 +313,7 @@ GJK_EPA(entity *A, entity *B)
                     EdgeNormal = v2Invert(EdgeNormal);
                 }
                 
-                // NOTE(Sleepster): Find the Distance from the edge. The closest distance is always the perpindicular distance from the edge. 
+                // NOTE(Sleepster): Find the Distance from the edge. The closest distance is always the perpindicular distance from the edge.
                 real32 Distance = v2Dot(EdgeNormal, AO);
                 
                 Assert(Distance <= 0, "Distance is not less than zero\n");
@@ -339,7 +339,7 @@ GJK_EPA(entity *A, entity *B)
                 CollisionInfo.Depth = FloatDistance;
                 break;
             }
-            else 
+            else
             {
                 // NOTE(Sleepster): If we're here, we haven't reached the edge of our Minkowski Difference.
                 //                  Continue by adding points to the simplex in between the two points that made the closest edge.
@@ -359,7 +359,7 @@ GJK(entity *A, entity *B)
 
 // NOTE(Sleepster): END OF GJK EPA
 
-internal void 
+internal void
 UpdateEntityColliderData(entity *Entity)
 {
     Entity->Vertex[TOP_LEFT]     = {Entity->Position};
@@ -442,44 +442,17 @@ DrawTilemap(const uint8 Tilemap[TILEMAP_SIZE_Y][TILEMAP_SIZE_X], glrenderdata *R
             {
                 case 0:
                 {
-                    State->Entities[State->CurrentEntityCount] = 
+                    State->Entities[State->CurrentEntityCount] =
                         CreateEntity(SPRITE_FLOOR, {real32(Column * TILESIZE), real32(Row * TILESIZE)}, {16, 16}, RenderData, State);
                 }break;
                 case 1:
                 {
-                    State->Entities[State->CurrentEntityCount] = 
+                    State->Entities[State->CurrentEntityCount] =
                         CreateEntity(SPRITE_WALL, {real32(Column * TILESIZE), real32(Row * TILESIZE)}, {16, 16}, RenderData, State);
                 }break;
             }
         }
     }
-}
-
-extern "C"
-GAME_ON_AWAKE(GameOnAwake)
-{
-    const uint8 Tilemap[TILEMAP_SIZE_Y][TILEMAP_SIZE_X] = 
-    {
-        {1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1},
-        {1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
-        {1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
-        {1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
-        {1,0,0,0, 1,1,1,0, 0,1,1,0, 0,0,0,0, 1},
-        {1,0,0,0, 1,0,0,0, 0,0,1,0, 0,0,0,0, 1},
-        {1,0,0,0, 1,0,0,0, 0,0,1,0, 0,0,0,0, 1},
-        {1,0,0,0, 1,0,0,0, 0,0,1,0, 0,0,0,0, 1},
-        {1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1}
-    };
-    
-    sh_glLoadSpriteSheet(RenderData);
-    
-    State->Entities[0] = {};
-    State->CurrentEntityCount = 0;
-    State->Entities[1] = CreateEntity(SPRITE_DICE, {160, 30}, {16, 16}, RenderData, State);
-    DrawTilemap(Tilemap, RenderData, State);
-    
-    // NOTE(Sleepster): see about making it so that I can just call the event name to play it?
-    //sh_FMODPlaySoundFX(AudioSubsystem->SoundFX[TEST_SFX]);
 }
 
 internal void
@@ -492,7 +465,7 @@ UpdatePlayerPosition(gamestate *State, time Time)
         Player->Acceleration.y = -1.0f * Time.DeltaTime;
     }
     
-    if(IsGameKeyDown(MOVE_DOWN, &State->GameInput))
+    else if(IsGameKeyDown(MOVE_DOWN, &State->GameInput))
     {
         Player->Acceleration.y = 1.0f * Time.DeltaTime;
     }
@@ -502,7 +475,7 @@ UpdatePlayerPosition(gamestate *State, time Time)
         Player->Acceleration.x = -1.0f * Time.DeltaTime;
     }
     
-    if(IsGameKeyDown(MOVE_RIGHT, &State->GameInput))
+    else if(IsGameKeyDown(MOVE_RIGHT, &State->GameInput))
     {
         Player->Acceleration.x = 1.0f * Time.DeltaTime;
     }
@@ -531,10 +504,38 @@ UpdatePlayerPosition(gamestate *State, time Time)
 }
 
 extern "C"
+GAME_ON_AWAKE(GameOnAwake)
+{
+    const uint8 Tilemap[TILEMAP_SIZE_Y][TILEMAP_SIZE_X] =
+    {
+        {1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1},
+        {1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
+        {1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
+        {1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
+        {1,0,0,0, 1,1,1,0, 0,1,1,0, 0,0,0,0, 1},
+        {1,0,0,0, 1,0,0,0, 0,0,1,0, 0,0,0,0, 1},
+        {1,0,0,0, 1,0,0,0, 0,0,1,0, 0,0,0,0, 1},
+        {1,0,0,0, 1,0,0,0, 0,0,1,0, 0,0,0,0, 1},
+        {1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1}
+    };
+    
+    sh_glLoadSpriteSheet(RenderData);
+    
+    State->Entities[0] = {};
+    State->CurrentEntityCount = 0;
+    State->Entities[1] = CreateEntity(SPRITE_DICE, {160, 30}, {16, 16}, RenderData, State);
+    DrawTilemap(Tilemap, RenderData, State);
+    
+    // NOTE(Sleepster): see about making it so that I can just call the event name to play it?
+    sh_FMODPlaySoundFX(AudioSubsystem->SoundFX[TEST_SFX]);
+}
+
+extern "C"
 GAME_FIXED_UPDATE(GameFixedUpdate)
 {
     // NOTE(Sleepster): For some reason a "for" loop being present within this fixedupdate causes the game to break
 }
+
 extern "C"
 GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
 {

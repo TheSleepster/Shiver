@@ -13,6 +13,7 @@ pushd ..\build
 del *.pdb
 cl %opts% ../code/Win32_Shiver.cpp -I"../data/deps" %CommonCompilerFlags% -MT -link %CommonLinkerFlags% -OUT:"Shiver.exe" 
 cl %opts% ../code/Shiver.cpp -I"../data/deps" %CommonCompilerFlags% -MT -LD -link "../data/deps/FMOD/fmodL_vc.lib" "../data/deps/FMOD/fmodstudioL_vc.lib" -incremental:no -PDB:Shiver_%RANDOM%.pdb -EXPORT:GameUnlockedUpdate -EXPORT:GameFixedUpdate -EXPORT:GameOnAwake -OUT:"../data/ShiverGame.dll"
+
 popd
 
 @echo ====================

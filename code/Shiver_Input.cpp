@@ -116,6 +116,7 @@ Win32LoadKeyData(gamestate *State)
     State->KeyCodeLookup[VK_NUMPAD9] = KEY_NUMPAD_9;
 }
 
+// TODO(Sleepster): Alternative mapping no worky
 internal inline Keymapping
 AddKeyBinding(KeyCodeID MainKey, KeyCodeID AltKey)
 {

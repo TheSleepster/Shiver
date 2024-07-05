@@ -87,6 +87,7 @@ sh_LoadFMODStudioBankData(fmod_sound_subsystem_data *FMODSubsystemData, const ch
     FMODSubsystemData->StringsBankLastWriteTime = Win32GetLastWriteTime(FMODSubsystemData->StringsBankFilepath);
 }
 
+// NOTE(Sleepster): This will load all of the sounds from the banks into the engine
 internal inline void
 sh_FMODStudioLoadSFXData(fmod_sound_subsystem_data *FMODSubsystemData, fmod_sound_event *SoundEffects)
 {
