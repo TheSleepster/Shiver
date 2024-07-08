@@ -21,6 +21,8 @@ struct fmod_sound_event
 enum audiosfx
 {
     TEST_SFX,
+    TEST_BOOP,
+    TEST_MUSIC,
     SFX_COUNT
 };
 

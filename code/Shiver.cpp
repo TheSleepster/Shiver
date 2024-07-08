@@ -40,25 +40,25 @@ struct epa_edge
 internal void
 ResolveSolidCollision(entity *A, gjk_epa_data Data)
 {
-    A->Velocity = v2Reflect(A->Velocity, Data.CollisionNormal);
+    vec2 PenVector = Data.CollisionNormal * (real32)Data.Depth;
+    A->Velocity = v2Reflect(A->Velocity, Data.CollisionNormal)*0.5f;
     
     if(Data.CollisionNormal.y == 1)
     {
-        A->Position.y += -(real32)EPSILON;
+        A->Position.y += -real32(EPSILON + Data.Depth);
     }
     else if(Data.CollisionNormal.y == -1)
     {
-        A->Position.y += (real32)EPSILON;
-        A->Velocity.x = 0;
+        A->Position.y += real32(EPSILON + Data.Depth);
     }
     
     if(Data.CollisionNormal.x == 1)
     {
-        A->Position.x += -(real32)EPSILON;
+        A->Position.x += -real32(EPSILON + Data.Depth);
     }
     else if(Data.CollisionNormal.x == -1)
     {
-        A->Position.x += (real32)EPSILON;
+        A->Position.x += real32(EPSILON + Data.Depth);
     }
     
     A->Velocity = {0.0f, 0.0f};
@@ -382,10 +382,11 @@ CreateEntity(static_sprites SpriteID, vec2 Position, vec2 Size, glrenderdata *Re
             Entity.Restitution = 0.0f;
             Entity.Mass = 100.0f;
             Entity.InvMass = 1 / Entity.Mass;
+            Entity.Speed = 0.5f;
         }break;
         case SPRITE_FLOOR:
         {
-            Entity.Flags = IS_BACKGROUND|IS_ACTIVE;
+            Entity.Flags = IS_TILE|IS_ACTIVE;
             Entity.Restitution = 0.0f;
             Entity.Mass = 10.0f;
             Entity.InvMass = 1 / Entity.Mass;
@@ -491,16 +492,9 @@ UpdatePlayerPosition(gamestate *State, time Time)
     // NOTE(Sleepster): ODE here for friction
     Player->Acceleration += -(0.05f * Player->Velocity);
     
-    Player->Position = (0.5f * (Player->Acceleration * Square(Time.DeltaTime)) + (Player->Velocity * Time.DeltaTime) + OldPlayerP);
     Player->Position = v2Lerp(Player->Position, OldPlayerP, Time.DeltaTime);
-    Player->Velocity = (Player->Acceleration * Time.DeltaTime) + OldPlayerV;
-    
-    for(int32 EntityIndex = 1;
-        EntityIndex <= State->CurrentEntityCount;
-        ++EntityIndex)
-    {
-        UpdateEntityColliderData(&State->Entities[EntityIndex]);
-    }
+    Player->Position = (0.5f * (Player->Acceleration * Square(Time.DeltaTime)) + (Player->Velocity * Time.DeltaTime) + OldPlayerP);
+    Player->Velocity = (Player->Speed * (Player->Acceleration * Time.DeltaTime)) + OldPlayerV;
 }
 
 extern "C"
@@ -521,15 +515,20 @@ GAME_ON_AWAKE(GameOnAwake)
     
     sh_glLoadSpriteSheet(RenderData);
     
-    State->Entities[0] = {};
     State->CurrentEntityCount = 0;
+    State->Entities[0] = {};
     State->Entities[1] = CreateEntity(SPRITE_DICE, {160, 30}, {16, 16}, RenderData, State);
     DrawTilemap(Tilemap, RenderData, State);
     
-    // NOTE(Sleepster): see about making it so that I can just call the event name to play it?
-    sh_FMODPlaySoundFX(AudioSubsystem->SoundFX[TEST_SFX]);
+    // TODO(Sleepster): see about making it so that I can just call the event name to play it?
+    //sh_FMODPlaySoundFX(AudioSubsystem->SoundFX[TEST_MUSIC]);
 }
 
+
+// NOTE(Sleepster): Make a function that adds to the players speed in the fixed time step to try and fix this weird collision jank
+// The idea is that this will add to the velocity here, independant of the framerate so that the player will move the same regardless
+// of framerate, but the main frame-indepenent update function will still keep the position correct, potentially fixing our collider
+// problems
 extern "C"
 GAME_FIXED_UPDATE(GameFixedUpdate)
 {
@@ -551,12 +550,21 @@ GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
             if(CollisionData.Collision)
             {
                 ResolveSolidCollision(&State->Entities[1], CollisionData);
+                sh_FMODPlaySoundFX(AudioSubsystem->SoundFX[TEST_BOOP]);
             }
             else
             {
                 UpdatePlayerPosition(State, Time);
             }
         }
+    }
+    
+    
+    for(int32 EntityIndex = 1;
+        EntityIndex <= State->CurrentEntityCount;
+        ++EntityIndex)
+    {
+        UpdateEntityColliderData(&State->Entities[EntityIndex]);
     }
     
     // NOTE(Sleepster): Move this out of here? Seems a little odd the game would be doing the rendering

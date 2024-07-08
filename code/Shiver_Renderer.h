@@ -15,6 +15,7 @@
 enum ShaderPrograms
 {
     BASIC,
+    BLOOM,
     SHADERCOUNT
 };
 

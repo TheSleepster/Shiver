@@ -55,12 +55,14 @@ sh_InitializeFMODStudioSubsystem(fmod_sound_subsystem_data *FMODSubsystemData)
     if(Result != FMOD_OK)
     {
         print_m("Error: %d\n", Result);
-        Assert(false, "Failed to Intialize the FMOD studio system!\n");;
+        Assert(false, "Failed to Intialize the FMOD studio system!\n");
     }
 }
 
 internal void
-sh_LoadFMODStudioBankData(fmod_sound_subsystem_data *FMODSubsystemData, const char *MainBankFilepath, const char *StringsBankFilepath)
+sh_LoadFMODStudioBankData(fmod_sound_subsystem_data *FMODSubsystemData, 
+                          const char *MainBankFilepath, 
+                          const char *StringsBankFilepath)
 {
     FMOD_RESULT Result;
     
@@ -89,17 +91,21 @@ sh_LoadFMODStudioBankData(fmod_sound_subsystem_data *FMODSubsystemData, const ch
 
 // NOTE(Sleepster): This will load all of the sounds from the banks into the engine
 internal inline void
-sh_FMODStudioLoadSFXData(fmod_sound_subsystem_data *FMODSubsystemData, fmod_sound_event *SoundEffects)
+sh_FMODStudioLoadSFXData(fmod_sound_subsystem_data *FMODSubsystemData, 
+                         fmod_sound_event *SoundEffects)
 {
     FMOD_Studio_System_GetEvent(FMODSubsystemData->StudioSystem, "event:/Test", &SoundEffects[TEST_SFX].EventDesc);
+    FMOD_Studio_System_GetEvent(FMODSubsystemData->StudioSystem, "event:/Boop", &SoundEffects[TEST_BOOP].EventDesc);
+    FMOD_Studio_System_GetEvent(FMODSubsystemData->StudioSystem, "event:/Music", &SoundEffects[TEST_MUSIC].EventDesc);
 }
 
 internal void 
-sh_ReloadFMODStudioBankData(fmod_sound_subsystem_data *FMODSubsystemData, fmod_sound_event *SoundEffects)
+sh_ReloadFMODStudioBankData(fmod_sound_subsystem_data *FMODSubsystemData, 
+                            fmod_sound_event *SoundEffects)
 {
     // RELOAD THE MASTER BANK DATA
     FMOD_Studio_Bank_Unload(FMODSubsystemData->MasterBank);
-    FMOD_Studio_System_LoadBankFile(FMODSubsystemData->StudioSystem, FMODSubsystemData->MasterBankFilepath, 
+    FMOD_Studio_System_LoadBankFile(FMODSubsystemData->StudioSystem, FMODSubsystemData->MasterBankFilepath,
                                     FMOD_STUDIO_LOAD_BANK_NORMAL, &FMODSubsystemData->MasterBank);
     // RELOAD THE STRINGS BANK DATA
     FMOD_Studio_Bank_Unload(FMODSubsystemData->MasterStringsBank);

@@ -26,10 +26,11 @@ enum collider_type
 
 enum entity_flags
 {
-    IS_SOLID      = 1 << 0,
-    IS_ACTOR      = 1 << 1,
-    IS_BACKGROUND = 1 << 2,
-    IS_ACTIVE     = 1 << 3,
+    IS_SOLID  = 1 << 0,
+    IS_ACTOR  = 1 << 1,
+    IS_TILE   = 1 << 2,
+    IS_ACTIVE = 1 << 3,
+
     FlagCount
 };
 
@@ -47,6 +48,9 @@ struct entity
     vec2 Velocity;
     vec2 Acceleration;
     vec2 AppliedForce;
+    
+    real32 Speed;
+    bool Collision;
     
     vec2 Vertex[MAX_COLLIDER_VERTS];
     int32 VertexCount;

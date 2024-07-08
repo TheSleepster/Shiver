@@ -452,7 +452,6 @@ WinMain(HINSTANCE hInstance,
                 }
                 Time.Alpha = Accumulator / Time.DeltaTime;
                 
-                
                 // UPDATE GAME (Framerate Independant)
                 Game.UnlockedUpdate(&State, &RenderData, &FMODSubsystemData, Time, &GameMemory);
                 

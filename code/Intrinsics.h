@@ -62,4 +62,7 @@ typedef double real64;
 #define WIN32_LEAN_AND_MEAN
 #endif
 
+#define ENGINE 1
+#define SHIVER_SLOW 1
+
 #endif //_INTRINSICS_H

@@ -123,8 +123,7 @@ IsKeyDown(KeyCodeID KeyCode, Input *GameInput)
 {
     Key Key = GameInput->Keyboard.Keys[KeyCode];
     if(Key.IsDown) 
-    {
-        return(1);
+    {return(1);
     }
     return(0);
 }
