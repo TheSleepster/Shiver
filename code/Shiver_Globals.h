@@ -11,6 +11,11 @@ global_variable int64 PerfCountFrequency;
 global_variable real64 DeltaCounter;
 
 
+// ENGINE VARIABLES
+global_variable const int32 SAMPLE_COUNT = 48000;
+global_variable const int32 CHANNEL_COUNT = 2;
+
+
 // SIMULATION GLOBALS
 global_variable const int32 MAX_TRANSFORMS = 10000;
 global_variable const real32 SIMRATE = ((1.0f/90.0f)*1000);

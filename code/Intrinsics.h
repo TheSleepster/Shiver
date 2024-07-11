@@ -9,12 +9,12 @@
 #define Check(Expression, Message) if(!(Expression)) {OutputDebugStringA(Message);}
 #define dAssert(Expression) if(!(Expression)) {DebugBreak();}
 #define Trace(Message) {OutputDebugStringA(Message);}
-#define print_m(Message, Printing) {char BUFFER[256] = {}; sprintf(BUFFER, Message, Printing); OutputDebugStringA(BUFFER);}
+#define print_m(Message, ...) {char BUFFER[256] = {}; sprintf(BUFFER, Message, __VA_ARGS__); OutputDebugStringA(BUFFER);}
 
 #else
 
 #define Assert(Expression, Message)
-#define Check(Expression, Message) 
+#define Check(Expression, Message)
 #define dAssert(Expression)
 #define print_m(Message, Printing)
 #define Trace(Message)
@@ -64,5 +64,6 @@ typedef double real64;
 
 #define ENGINE 1
 #define SHIVER_SLOW 1
+#define FMOD 0
 
 #endif //_INTRINSICS_H

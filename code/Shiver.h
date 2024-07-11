@@ -9,6 +9,7 @@
 #include "Shiver_AudioEngine.h"
 #include "Shiver_Globals.h"
 
+
 enum vertex_positions
 {
     TOP_LEFT,
@@ -30,8 +31,7 @@ enum entity_flags
     IS_ACTOR  = 1 << 1,
     IS_TILE   = 1 << 2,
     IS_ACTIVE = 1 << 3,
-
-    FlagCount
+    ENTITY_FLAGS_COUNT
 };
 
 // TODO(Sleepster): Sprite Directions
@@ -39,34 +39,34 @@ struct entity
 {
     uint32 Flags;
     uint32 ColliderType;
-    
+
     static_sprites SpriteID;
     static_sprite_data Sprite;
-    
+
     vec2 Size;
     vec2 Position;
     vec2 Velocity;
     vec2 Acceleration;
     vec2 AppliedForce;
-    
+
     real32 Speed;
     bool Collision;
-    
+
     vec2 Vertex[MAX_COLLIDER_VERTS];
     int32 VertexCount;
-    
+
     real32 Mass;
     real32 InvMass;
-    
+
     // NOTE(Sleepster): This is spooky
     real32 Radius;
     real32 Rotation;
     real32 Inertia;
     real32 InvInertia;
-    
+
     real32 StaticFriction;
     real32 DynamicFriction;
-    
+
     real32 Density;
     real32 Restitution;
 };
@@ -89,7 +89,7 @@ struct gamestate
 {
     KeyCodeID KeyCodeLookup[KEY_COUNT];
     Input GameInput;
-    
+
     int32 CurrentEntityCount;
     entity Entities[256];
 };
@@ -118,7 +118,7 @@ internal void
 sh_glDrawStaticSprite2D(static_sprites SpriteID, vec2 Position, ivec2 Size, glrenderdata *RenderData)
 {
     static_sprite_data SpriteData = sh_glGetSprite(SpriteID, RenderData);
-    
+
     renderertransform Transform  = {};
     Transform.AtlasOffset = SpriteData.AtlasOffset;
     Transform.SpriteSize = SpriteData.SpriteSize;
@@ -127,7 +127,7 @@ sh_glDrawStaticSprite2D(static_sprites SpriteID, vec2 Position, ivec2 Size, glre
     RenderData->RendererTransforms[RenderData->TransformCounter++] = Transform;
 }
 
-#define GAME_UPDATE_AND_RENDER(name) void name(gamestate *State, glrenderdata *RenderData, fmod_sound_subsystem_data *AudioSubsystem, time Time, game_memory *Memory)
+#define GAME_UPDATE_AND_RENDER(name) void name(gamestate *State, glrenderdata *RenderData, time Time, game_memory *Memory)
 typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
 GAME_UPDATE_AND_RENDER(GameUpdateAndRenderStub)
 {
@@ -139,7 +139,7 @@ GAME_FIXED_UPDATE(GameFixedUpdateStub)
 {
 }
 
-#define GAME_ON_AWAKE(name) void name(gamestate *State, glrenderdata *RenderData, fmod_sound_subsystem_data *AudioSubsystem, game_memory *Memory)
+#define GAME_ON_AWAKE(name) void name(gamestate *State, glrenderdata *RenderData, game_memory *Memory)
 typedef GAME_ON_AWAKE(game_on_awake);
 GAME_ON_AWAKE(GameOnAwakeStub)
 {

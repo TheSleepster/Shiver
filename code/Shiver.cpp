@@ -492,9 +492,9 @@ UpdatePlayerPosition(gamestate *State, time Time)
     // NOTE(Sleepster): ODE here for friction
     Player->Acceleration += -(0.05f * Player->Velocity);
     
-    Player->Position = v2Lerp(Player->Position, OldPlayerP, Time.DeltaTime);
     Player->Position = (0.5f * (Player->Acceleration * Square(Time.DeltaTime)) + (Player->Velocity * Time.DeltaTime) + OldPlayerP);
     Player->Velocity = (Player->Speed * (Player->Acceleration * Time.DeltaTime)) + OldPlayerV;
+    Player->Position = v2Lerp(Player->Position, OldPlayerP, Time.DeltaTime);
 }
 
 extern "C"
@@ -525,6 +525,7 @@ GAME_ON_AWAKE(GameOnAwake)
 }
 
 
+
 // NOTE(Sleepster): Make a function that adds to the players speed in the fixed time step to try and fix this weird collision jank
 // The idea is that this will add to the velocity here, independant of the framerate so that the player will move the same regardless
 // of framerate, but the main frame-indepenent update function will still keep the position correct, potentially fixing our collider
@@ -533,6 +534,7 @@ extern "C"
 GAME_FIXED_UPDATE(GameFixedUpdate)
 {
     // NOTE(Sleepster): For some reason a "for" loop being present within this fixedupdate causes the game to break
+    UpdatePlayerPosition(State, Time);
 }
 
 extern "C"
@@ -550,11 +552,6 @@ GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
             if(CollisionData.Collision)
             {
                 ResolveSolidCollision(&State->Entities[1], CollisionData);
-                sh_FMODPlaySoundFX(AudioSubsystem->SoundFX[TEST_BOOP]);
-            }
-            else
-            {
-                UpdatePlayerPosition(State, Time);
             }
         }
     }
