@@ -1,5 +1,6 @@
 #include "Intrinsics.h"
 #include "Shiver.h"
+#include "Shiver_AudioEngine.h"
 #include "util/ShiverArray.h"
 
 // Solving order
@@ -10,6 +11,7 @@
 
 // NOTE(Sleepster): The Simplex is no longer just 3 points since we are now using EPA for the distance and normal calculations
 //                  Won't be a dynamic buffer, if you have more than 128 verts what the shit are you doing? Change this then.
+
 struct simplex
 {
     vec2 Vertex[MAX_SIMPLEX_VERTS];
@@ -500,6 +502,8 @@ UpdatePlayerPosition(gamestate *State, time Time)
 extern "C"
 GAME_ON_AWAKE(GameOnAwake)
 {
+    AudioSubsystem = AudioEngine; 
+    
     const uint8 Tilemap[TILEMAP_SIZE_Y][TILEMAP_SIZE_X] =
     {
         {1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1},
@@ -522,6 +526,10 @@ GAME_ON_AWAKE(GameOnAwake)
     
     // TODO(Sleepster): see about making it so that I can just call the event name to play it?
     //sh_FMODPlaySoundFX(AudioSubsystem->SoundFX[TEST_MUSIC]);
+    //
+    sh_LoadBackgroundTracks();
+    
+    sh_PlayBackgroundTrack(SUNKEN_SEA);
 }
 
 

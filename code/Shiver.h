@@ -127,19 +127,19 @@ sh_glDrawStaticSprite2D(static_sprites SpriteID, vec2 Position, ivec2 Size, glre
     RenderData->RendererTransforms[RenderData->TransformCounter++] = Transform;
 }
 
-#define GAME_UPDATE_AND_RENDER(name) void name(gamestate *State, glrenderdata *RenderData, time Time, game_memory *Memory)
+#define GAME_UPDATE_AND_RENDER(name) void name(gamestate *State, glrenderdata *RenderData, shiver_audio_engine *AudioEngine, time Time, game_memory *Memory)
 typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
 GAME_UPDATE_AND_RENDER(GameUpdateAndRenderStub)
 {
 }
 
-#define GAME_FIXED_UPDATE(name) void name(gamestate *State, glrenderdata *RenderData, time Time, game_memory *Memory)
+#define GAME_FIXED_UPDATE(name) void name(gamestate *State, glrenderdata *RenderData, shiver_audio_engine *AudioEngine, time Time, game_memory *Memory)
 typedef GAME_FIXED_UPDATE(game_fixed_update);
 GAME_FIXED_UPDATE(GameFixedUpdateStub)
 {
 }
 
-#define GAME_ON_AWAKE(name) void name(gamestate *State, glrenderdata *RenderData, game_memory *Memory)
+#define GAME_ON_AWAKE(name) void name(gamestate *State, glrenderdata *RenderData, shiver_audio_engine *AudioEngine, game_memory *Memory)
 typedef GAME_ON_AWAKE(game_on_awake);
 GAME_ON_AWAKE(GameOnAwakeStub)
 {

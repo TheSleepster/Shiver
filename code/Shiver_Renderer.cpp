@@ -4,10 +4,13 @@
 #include "Shiver.h"
 
 // OPENGL
+
+#if 0
 #include "../data/deps/OpenGL/GLL.h"
 #include "../data/deps/OpenGL/glcorearb.h"
 #include "../data/deps/OpenGL/glext.h"
 #include "../data/deps/OpenGL/wglext.h"
+#endif
 
 // STB IMAGE TEXTURE LOADING
 #define STB_IMAGE_IMPLEMENTATION

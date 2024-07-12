@@ -12,8 +12,9 @@ global_variable real64 DeltaCounter;
 
 
 // ENGINE VARIABLES
-global_variable const int32 SAMPLE_COUNT = 48000;
+global_variable const int32 SAMPLE_RATE = 48000;
 global_variable const int32 CHANNEL_COUNT = 2;
+global_variable const int32 MAX_SOUNDS = 128;
 
 
 // SIMULATION GLOBALS
@@ -37,5 +38,6 @@ global_variable const real32 EPSILON = 0.05f;
 
 global_variable const int32 MAX_COLLIDER_VERTS = 32;
 global_variable const int32 MAX_SIMPLEX_VERTS = 512;
+
 
 #endif //_SHIVER__GLOBALS_H
