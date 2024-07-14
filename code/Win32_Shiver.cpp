@@ -397,7 +397,7 @@ WinMain(HINSTANCE hInstance,
             
             sh_InitializeAudioEngine(AudioSubsystem);
             AudioSubsystem->Initialized = true;
-            sh_LoadBackgroundTracks();
+            //sh_LoadBackgroundTracks();
             
             real32 Accumulator = 0;
             GlobalRunning = true;

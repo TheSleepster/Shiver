@@ -523,11 +523,9 @@ GAME_ON_AWAKE(GameOnAwake)
     State->Entities[1] = CreateEntity(SPRITE_DICE, {160, 30}, {16, 16}, RenderData, State);
     DrawTilemap(Tilemap, RenderData, State);
     
-    // TODO(Sleepster): Make the reloading of the audio engine a function pointer to the reset function in the engine
+    // NOTE(Sleepster): If we ware playing a background track, hot reloading is dead
     //sh_FMODPlaySoundFX(AudioSubsystem->SoundFX[TEST_MUSIC]);
-    sh_PlayBackgroundTrack(SUNKEN_SEA);
-    
-    
+    //sh_PlayBackgroundTrack(SUNKEN_SEA);
 }
 
 
