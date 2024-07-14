@@ -1,4 +1,3 @@
-
 layout(std430, Binding = 0) buffer TransformSBO
 {
     renderertransform Transforms[];
@@ -30,7 +29,7 @@ void main()
     float Right = Transform.AtlasOffset.x + Transform.SpriteSize.x;
     float Bottom = Transform.AtlasOffset.y + Transform.SpriteSize.y;
     
-    vec2 TextureCoords[6] = 
+    vec2 TextureCoords[6] =
     {
         vec2(Left, Top),
         vec2(Left, Bottom),
