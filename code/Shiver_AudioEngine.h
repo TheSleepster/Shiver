@@ -118,6 +118,8 @@ struct shiver_audio_engine
     
     uint32 CurrentTrackIdx;
     ma_sound BackgroundTracks[MAX_SOUNDS];
+    
+    bool Initialized;
 };
 
 // NOTE(Sleepster): AUDIO ENGINE POINTER
@@ -143,15 +145,18 @@ sh_LoadBackgroundTrack(char *Filename)
     char *Concat2 = ".mp3";
     snprintf(Complete, sizeof(Complete), "%s%s%s\0", Concat1, Filename, Concat2);
     
-    Result = ma_sound_init_from_file(&AudioSubsystem->Engine, 
-                                     Complete, 
-                                     MA_SOUND_FLAG_DECODE| 
-                                     MA_SOUND_FLAG_ASYNC | 
-                                     MA_SOUND_FLAG_STREAM, 
-                                     NULL, 
-                                     NULL, 
-                                     &AudioSubsystem->BackgroundTracks[AudioSubsystem->CurrentTrackIdx]);
-    ++AudioSubsystem->CurrentTrackIdx;
+    if(AudioSubsystem->Initialized)
+    {
+        Result = ma_sound_init_from_file(&AudioSubsystem->Engine, 
+                                         Complete, 
+                                         MA_SOUND_FLAG_DECODE| 
+                                         MA_SOUND_FLAG_ASYNC | 
+                                         MA_SOUND_FLAG_STREAM, 
+                                         NULL, 
+                                         NULL, 
+                                         &AudioSubsystem->BackgroundTracks[AudioSubsystem->CurrentTrackIdx]);
+        ++AudioSubsystem->CurrentTrackIdx;
+    }
 }
 
 internal inline void

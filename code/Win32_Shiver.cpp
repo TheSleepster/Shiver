@@ -181,6 +181,9 @@ Win32LoadGameCode(const char *SourceDLLName)
 internal void
 Win32UnloadGameCode(win32gamecode *GameCode)
 {
+    sh_ResetAudioEngine(AudioSubsystem);
+    AudioSubsystem->Initialized = false;
+    
     if(GameCode->GameCodeDLL)
     {
         FreeLibrary(GameCode->GameCodeDLL);
@@ -393,6 +396,8 @@ WinMain(HINSTANCE hInstance,
 #endif
             
             sh_InitializeAudioEngine(AudioSubsystem);
+            AudioSubsystem->Initialized = true;
+            sh_LoadBackgroundTracks();
             
             real32 Accumulator = 0;
             GlobalRunning = true;
@@ -408,7 +413,11 @@ WinMain(HINSTANCE hInstance,
                 if(CompareFileTime(&NewDLLWriteTime, &Game.LastWriteTime) != 0)
                 {
                     Win32UnloadGameCode(&Game);
+                    
                     Game = Win32LoadGameCode(SourceDLLName);
+                    
+                    sh_InitializeAudioEngine(AudioSubsystem);
+                    AudioSubsystem->Initialized = true;
                     
                     Game.OnAwake(&State, &RenderData, AudioSubsystem, &GameMemory);
                 }
@@ -430,14 +439,14 @@ WinMain(HINSTANCE hInstance,
                 // FIXED UPDATE (From DeltaTime)
                 while(Accumulator >= SIMRATE)
                 {
-                    Game.FixedUpdate(&State, &RenderData, AudioSubsystem, Time, &GameMemory);
+                    Game.FixedUpdate(&State, &RenderData, Time, &GameMemory);
                     
                     Accumulator -= Time.DeltaTime;
                 }
                 Time.Alpha = Accumulator / Time.DeltaTime;
                 
                 // UPDATE GAME (Framerate Independant)
-                Game.UnlockedUpdate(&State, &RenderData, AudioSubsystem,Time, &GameMemory);
+                Game.UnlockedUpdate(&State, &RenderData, Time, &GameMemory);
                 
                 // TODO(Sleepster): Defer the rendering to a seperate thread so that way we are able to activate VSYNC without breaking everything
                 sh_glRender(&WindowData, WindowHandle, &RenderData, &GameMemory.TransientStorage);

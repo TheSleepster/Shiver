@@ -502,8 +502,7 @@ UpdatePlayerPosition(gamestate *State, time Time)
 extern "C"
 GAME_ON_AWAKE(GameOnAwake)
 {
-    AudioSubsystem = AudioEngine; 
-    
+    AudioSubsystem = AudioEngineIn;
     const uint8 Tilemap[TILEMAP_SIZE_Y][TILEMAP_SIZE_X] =
     {
         {1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1},
@@ -524,12 +523,11 @@ GAME_ON_AWAKE(GameOnAwake)
     State->Entities[1] = CreateEntity(SPRITE_DICE, {160, 30}, {16, 16}, RenderData, State);
     DrawTilemap(Tilemap, RenderData, State);
     
-    // TODO(Sleepster): see about making it so that I can just call the event name to play it?
+    // TODO(Sleepster): Make the reloading of the audio engine a function pointer to the reset function in the engine
     //sh_FMODPlaySoundFX(AudioSubsystem->SoundFX[TEST_MUSIC]);
-    //
-    sh_LoadBackgroundTracks();
-    
     sh_PlayBackgroundTrack(SUNKEN_SEA);
+    
+    
 }
 
 
@@ -560,6 +558,7 @@ GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
             if(CollisionData.Collision)
             {
                 ResolveSolidCollision(&State->Entities[1], CollisionData);
+                sh_PlaySound("boop");
             }
         }
     }

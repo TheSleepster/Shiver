@@ -269,7 +269,36 @@ sh_InitializeAudioEngine(shiver_audio_engine *AudioEngine)
         print_m("Failure to initialize the engine!, Code: %d\n", Result);
         Assert(false, "Failure\n");
     }
-
+    
+    ma_context_uninit(&AudioEngine->AudioContext);
     ma_device_start(&AudioEngine->OutputDevice);
+    
     ma_engine_set_volume(&AudioEngine->Engine, 0.05f);
+}
+
+internal void
+sh_ResetAudioEngine(shiver_audio_engine *AudioEngine)
+{
+    for(uint32 AudioIdx = 0;
+        AudioIdx < AudioEngine->CurrentTrackIdx;
+        ++AudioIdx)
+    {
+        ma_sound_stop(&AudioEngine->BackgroundTracks[AudioIdx]);
+        ma_sound_uninit(&AudioEngine->BackgroundTracks[AudioIdx]);
+    }
+    ma_engine_uninit(&AudioEngine->Engine);
+    ma_device_uninit(&AudioEngine->OutputDevice);
+}
+
+internal void
+sh_RestartAudioEngine(shiver_audio_engine *AudioEngine)
+{
+    AudioEngine->Initialized = false;
+    
+    while(!AudioEngine->Initialized)
+    {
+        sh_ResetAudioEngine(AudioEngine);
+        sh_InitializeAudioEngine(AudioEngine);
+        AudioEngine->Initialized = true;
+    }
 }
