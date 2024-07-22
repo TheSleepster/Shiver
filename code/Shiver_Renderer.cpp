@@ -2,7 +2,6 @@
 #include "util/MemoryArena.h"
 #include "util/Math.h"
 #include "Shiver.h"
-
 // OPENGL
 
 #if 0
@@ -332,9 +331,10 @@ sh_glRender(win32windowdata *WindowData, HWND WindowHandle, glrenderdata *Render
         RenderData->Cameras[CAMERA_GAME].Position.y + RenderData->Cameras[CAMERA_GAME].Viewport.y
     };
     
-    RenderData->Cameras[CAMERA_GAME].Matrix = CreateOrthographicMatrix(CameraInfo);
     
+    RenderData->Cameras[CAMERA_GAME].Matrix = CreateOrthographicMatrix(CameraInfo);
     glUniformMatrix4fv(RenderData->OrthographicMatrixID, 1, GL_FALSE, (const GLfloat *)&RenderData->Cameras[CAMERA_GAME].Matrix.Elements[0][0]);
+    
     glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(renderertransform) * RenderData->TransformCounter, RenderData->RendererTransforms);
     glDrawArraysInstanced(GL_TRIANGLES, 0, 6, RenderData->TransformCounter);
     SwapBuffers(WindowDC);

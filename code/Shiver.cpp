@@ -12,32 +12,6 @@
 // NOTE(Sleepster): The Simplex is no longer just 3 points since we are now using EPA for the distance and normal calculations
 //                  Won't be a dynamic buffer, if you have more than 128 verts what the shit are you doing? Change this then.
 
-struct simplex
-{
-    vec2 Vertex[MAX_SIMPLEX_VERTS];
-    int32 VertexCount;
-};
-
-struct gjk_data
-{
-    bool32 Collision;
-    simplex Simplex;
-};
-
-struct gjk_epa_data
-{
-    bool32 Collision;
-    real64 Depth;
-    vec2 CollisionNormal;
-};
-
-struct epa_edge
-{
-    vec2 Normal;
-    int32 Index;
-    real32 Distance;
-};
-
 // TODO(Sleepster): Make it so that instead of checking all 8 directions, we only check 4 (North, South, East, West)
 internal void
 ResolveSolidCollision(entity *A, gjk_epa_data Data)
@@ -359,8 +333,6 @@ GJK(entity *A, entity *B)
     return(Result.Collision);
 }
 
-// NOTE(Sleepster): END OF GJK EPA
-
 internal void
 UpdateEntityColliderData(entity *Entity)
 {
@@ -372,6 +344,7 @@ UpdateEntityColliderData(entity *Entity)
 // NOTE(Sleepster): END OF GJK
 
 // TODO(Sleepster): Make it so that we are not making a new sprite every frame, only when we need to actually make it
+
 internal entity
 CreateEntity(static_sprites SpriteID, vec2 Position, vec2 Size, glrenderdata *RenderData, gamestate *State)
 {
@@ -420,7 +393,7 @@ CreateEntity(static_sprites SpriteID, vec2 Position, vec2 Size, glrenderdata *Re
 internal inline void
 DrawEntityStaticSprite2D(entity Entity, glrenderdata *RenderData)
 {
-    sh_glDrawStaticSprite2D(Entity.SpriteID, Entity.Position, iv2Cast(Entity.Size), RenderData);
+    sh_glDrawStaticSprite2D(Entity.SpriteID, Entity.Position, iv2Cast(Entity.Size), 0.0f, RenderData);
 }
 
 internal inline entity
@@ -534,6 +507,7 @@ GAME_ON_AWAKE(GameOnAwake)
 // The idea is that this will add to the velocity here, independant of the framerate so that the player will move the same regardless
 // of framerate, but the main frame-indepenent update function will still keep the position correct, potentially fixing our collider
 // problems
+
 extern "C"
 GAME_FIXED_UPDATE(GameFixedUpdate)
 {
@@ -560,7 +534,6 @@ GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
             }
         }
     }
-    
     
     for(int32 EntityIndex = 1;
         EntityIndex <= State->CurrentEntityCount;

@@ -77,6 +77,7 @@ struct static_sprite_data
 {
     ivec2 AtlasOffset;
     ivec2 SpriteSize;
+    real32 Rotation;
 };
 
 struct orthocamera2d
@@ -120,6 +121,23 @@ CreateOrthographicMatrix(vec4 Data)
     Result.Elements[1][1] =  2.0f / (Data.Top - Data.Bottom);
     Result.Elements[2][2] =  1.0f / (1.0f - 0.0f);
     Result.Elements[3][3] =  1.0f;
+    
+    return(Result);
+}
+
+internal mat4
+RotateZ(real32 Angle)
+{
+    mat4 Result = {};
+    
+    Result.Elements[0][0] = (real32)cos(Angle);
+    Result.Elements[1][0] = (real32)-sin(Angle);
+    
+    Result.Elements[0][1] = (real32)sin(Angle);
+    Result.Elements[1][1] = (real32)cos(Angle);
+    
+    Result.Elements[2][2] = 1.0f;
+    Result.Elements[3][3] = 1.0f;
     
     return(Result);
 }

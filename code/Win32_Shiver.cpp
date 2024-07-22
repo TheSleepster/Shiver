@@ -30,6 +30,7 @@
 #include <windows.h>
 
 // ENGINE UTILS
+#include "Shiver_Input.h"
 #include "util/MemoryArena.h"
 #include "util/Math.h"
 
@@ -421,6 +422,12 @@ WinMain(HINSTANCE hInstance,
                     
                     Game.OnAwake(&State, &RenderData, AudioSubsystem, &GameMemory);
                 }
+
+                // NOTE(Sleepster): This is for debugging purposes for now. This will not remain
+                if(IsKeyDown(KEY_ESCAPE, &State.GameInput))
+                {
+                    GlobalRunning = 0;
+                }
 #endif
                 MSG Message = {0};
                 Win32ProcessWindowMessages(Message, WindowHandle, &WindowData, &State);
@@ -450,7 +457,7 @@ WinMain(HINSTANCE hInstance,
                 
                 // TODO(Sleepster): Defer the rendering to a seperate thread so that way we are able to activate VSYNC without breaking everything
                 sh_glRender(&WindowData, WindowHandle, &RenderData, &GameMemory.TransientStorage);
-                
+
                 RenderData.TransformCounter = 0;
                 GameMemory.TransientStorage.Used = 0;
                 GameMemory.TransientStorage.Memory = {};

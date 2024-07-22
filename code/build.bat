@@ -6,7 +6,7 @@ REM remove -Zi
 Set opts=-DSHIVER_SLOW=1 -DENGINE=1 -DFMOD=0
 
 Set CommonCompilerFlags=-fp:fast -Fm -GR- -EHa- -Od -Oi -Zi -W4 -wd4189 -wd4200 -wd4996 -wd4706 -wd4530 -wd4100 -wd4201 -wd4505 -wd4652 -wd4653
-Set CommonLinkerFlags= /NOLOGO -incremental:no kernel32.lib user32.lib gdi32.lib opengl32.lib "../data/deps/MiniAudio/miniaudio.lib"
+Set CommonLinkerFlags= -incremental:no kernel32.lib user32.lib gdi32.lib opengl32.lib "../data/deps/MiniAudio/miniaudio.lib"
 
 IF NOT EXIST ..\build mkdir ..\build
 pushd ..\build

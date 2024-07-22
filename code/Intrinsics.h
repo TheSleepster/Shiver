@@ -27,9 +27,6 @@
 
 #define ArrayCount(Array) (sizeof(Array) / sizeof(Array[0]))
 
-#define Min(A, B) ((A < B) ? (A) : (B))
-#define Max(A, B) ((A > B)) ? (A) : (B))
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -66,5 +63,11 @@ typedef double real64;
 #define ENGINE 1
 #define SHIVER_SLOW 1
 #define FMOD 0
+
+struct string
+{
+    uint8 *Data;
+    uint64 Length;
+};
 
 #endif //_INTRINSICS_H

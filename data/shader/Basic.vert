@@ -13,7 +13,6 @@ void main()
 {
     renderertransform Transform = Transforms[gl_InstanceID];
     
-    
     vec2 Vertices[6] =
     {
         Transform.WorldPosition,

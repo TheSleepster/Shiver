@@ -9,7 +9,6 @@
 #include "Shiver_AudioEngine.h"
 #include "Shiver_Globals.h"
 
-
 enum vertex_positions
 {
     TOP_LEFT,
@@ -71,6 +70,32 @@ struct entity
     real32 Restitution;
 };
 
+struct simplex
+{
+    vec2 Vertex[MAX_SIMPLEX_VERTS];
+    int32 VertexCount;
+};
+
+struct gjk_data
+{
+    bool32 Collision;
+    simplex Simplex;
+};
+
+struct gjk_epa_data
+{
+    bool32 Collision;
+    real64 Depth;
+    vec2 CollisionNormal;
+};
+
+struct epa_edge
+{
+    vec2 Normal;
+    int32 Index;
+    real32 Distance;
+};
+
 struct time
 {
     real32 DeltaTime;
@@ -114,8 +139,9 @@ sh_glLoadSpriteSheet(glrenderdata *RenderData)
     RenderData->StaticSprites[SPRITE_WALL] = {{32, 0}, {16, 16}};
 }
 
+// NOTE(Sleepster): The rotation is in Degrees
 internal void
-sh_glDrawStaticSprite2D(static_sprites SpriteID, vec2 Position, ivec2 Size, glrenderdata *RenderData)
+sh_glDrawStaticSprite2D(static_sprites SpriteID, vec2 Position, ivec2 Size, real32 Rotation, glrenderdata *RenderData)
 {
     static_sprite_data SpriteData = sh_glGetSprite(SpriteID, RenderData);
     
@@ -124,6 +150,7 @@ sh_glDrawStaticSprite2D(static_sprites SpriteID, vec2 Position, ivec2 Size, glre
     Transform.SpriteSize = SpriteData.SpriteSize;
     Transform.Size = v2Cast(Size);
     Transform.WorldPosition = Position - (Transform.Size / 2);
+    
     RenderData->RendererTransforms[RenderData->TransformCounter++] = Transform;
 }
 
