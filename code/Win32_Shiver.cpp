@@ -309,16 +309,16 @@ WinMain(HINSTANCE hInstance,
     Window.lpfnWndProc = Win32MainWindowCallback;
     Window.hInstance = hInstance;
     Window.lpszClassName = "MakeshiftWindow";
+
+    WindowData.SizeData.x = 100;
+    WindowData.SizeData.y = 200;
+    WindowData.SizeData.Width = 1280;
+    WindowData.SizeData.Height = 720;
     
     if(RegisterClass(&Window))
     {
         Win32InitializeOpenGLFunctionPointers(Window, hInstance, &WGLFunctions);
         // ACTUAL WINDOW USED IN THE PROGRAM
-        
-        WindowData.SizeData.x = 100;
-        WindowData.SizeData.y = 200;
-        WindowData.SizeData.Width = 1280;
-        WindowData.SizeData.Height = 720;
         
         HWND WindowHandle =
             CreateWindow(Window.lpszClassName,
@@ -431,6 +431,11 @@ WinMain(HINSTANCE hInstance,
 #endif
                 MSG Message = {0};
                 Win32ProcessWindowMessages(Message, WindowHandle, &WindowData, &State);
+                
+                RECT Rect  = {};
+                GetClientRect(WindowHandle, &Rect);
+                WindowData.SizeData.Width = Rect.right - Rect.left;
+                WindowData.SizeData.Height = Rect.top + Rect.bottom;
                 
                 time Time = {};
                 

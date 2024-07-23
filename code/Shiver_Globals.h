@@ -3,6 +3,7 @@
 #ifndef _SHIVER__GLOBALS_H
 #define _SHIVER__GLOBALS_H
 #include "Intrinsics.h"
+#include "Shiver_Renderer.h"
 
 
 // PLATFORM GLOBLALS
@@ -24,8 +25,8 @@ global_variable const real32 RENDERRATE = ((1.0f/144.0f)*1000);
 
 
 // GAME GLOBALS
-global_variable const int32 WORLD_WIDTH = 160;
-global_variable const int32 WORLD_HEIGHT = 90;
+global_variable const int32 WORLD_WIDTH = 320;
+global_variable const int32 WORLD_HEIGHT = 180;
 
 global_variable const int32 TILEMAP_SIZE_X = 17;
 global_variable const int32 TILEMAP_SIZE_Y = 9;

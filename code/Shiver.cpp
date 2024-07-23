@@ -2,6 +2,7 @@
 #include "Shiver.h"
 #include "Shiver_AudioEngine.h"
 #include "Shiver_Globals.h"
+#include "util/Math.h"
 #include "util/ShiverArray.h"
 
 // Solving order
@@ -337,40 +338,37 @@ GJK(entity *A, entity *B)
 internal void
 UpdatePlayerPosition(entity *Player, gamestate *State, time Time)
 {
+    Player->Acceleration = {};
     if(IsGameKeyDown(MOVE_UP, &State->GameInput))
     {
-        Player->Acceleration.y = -1.0f * Time.DeltaTime;
+        Player->Acceleration.y = -1.0f;
     }
     
     else if(IsGameKeyDown(MOVE_DOWN, &State->GameInput))
     {
-        Player->Acceleration.y = 1.0f * Time.DeltaTime;
+        Player->Acceleration.y = 1.0f;
     }
     
     if(IsGameKeyDown(MOVE_LEFT, &State->GameInput))
     {
-        Player->Acceleration.x = -1.0f * Time.DeltaTime;
+        Player->Acceleration.x = -1.0f;
     }
     
     else if(IsGameKeyDown(MOVE_RIGHT, &State->GameInput))
     {
-        Player->Acceleration.x = 1.0f * Time.DeltaTime;
+        Player->Acceleration.x = 1.0f;
     }
-    
-    if(Player->Acceleration.x != 0 && Player->Acceleration.y != 0)
-    {
-        Player->Acceleration *= 0.77f;
-    }
+
+    v2Normalize(Player->Acceleration);
     
     vec2 OldPlayerP = Player->Position;
     vec2 OldPlayerV = Player->Velocity;
     
-    // NOTE(Sleepster): ODE here for friction
-    Player->Acceleration += -(0.05f * Player->Velocity);
-    
-    Player->Position = (0.5f * (Player->Acceleration * Square(Time.DeltaTime)) + (Player->Velocity * Time.DeltaTime) + OldPlayerP);
-    Player->Velocity = (Player->Speed * (Player->Acceleration * Time.DeltaTime)) + OldPlayerV;
-    Player->Position = v2Lerp(Player->Position, OldPlayerP, Time.DeltaTime);
+    real32 Friction = 0.9f;
+
+    vec2 NextPos = { Player->Position.x + (Player->Position.x - OldPlayerP.x) + (Player->Speed * Player->Acceleration.x) * Square(Time.DeltaTime),
+                     Player->Position.y + (Player->Position.y - OldPlayerP.y) + (Player->Speed * Player->Acceleration.y) * Square(Time.DeltaTime)};
+    Player->Position = NextPos;
 }
 
 internal void
@@ -404,7 +402,7 @@ SetupPlayer(entity *Entity, glrenderdata *RenderData)
 
     Entity->Position = vec2{0, 0};
     Entity->Velocity = vec2{0.0f, 0.0f};
-    Entity->Speed = 2.0f;
+    Entity->Speed = 10.0f;
             
     Entity->Vertex[TOP_LEFT]     = {Entity->Position};
     Entity->Vertex[TOP_RIGHT]    = {Entity->Position.x + Entity->Size.x, Entity->Position.y};
@@ -438,7 +436,7 @@ SetupTree(entity *Entity, glrenderdata *RenderData)
 
     Entity->Position = vec2{WORLD_WIDTH / 2, WORLD_HEIGHT / 2};
     Entity->Velocity = vec2{0.0f, 0.0f};
-    Entity->Speed = 2.0f;
+    Entity->Speed = 1.0f;
             
     Entity->Vertex[TOP_LEFT]     = {Entity->Position};
     Entity->Vertex[TOP_RIGHT]    = {Entity->Position.x + Entity->Size.x, Entity->Position.y};
@@ -467,7 +465,7 @@ CreateEntity(world *World)
     return(Result);
 }
 
-internal inline entity
+internal inline void
 DeleteEntity(entity *Entity)
 {
     memset(Entity, 0, sizeof(struct entity));
@@ -478,6 +476,16 @@ GAME_ON_AWAKE(GameOnAwake)
 {
     AudioSubsystem = AudioEngineIn;
     sh_glLoadSpriteSheet(RenderData);
+    
+    RenderData->GameCamera.Viewport = {WORLD_WIDTH, WORLD_HEIGHT};
+
+    for(uint32 EntityIndex = 0;
+        EntityIndex < MAX_ENTITIES;
+        ++EntityIndex)
+    {
+        entity *temp = &State->World.Entities[EntityIndex];
+        DeleteEntity(temp);
+    }
 
     entity *en = CreateEntity(&State->World);
     SetupPlayer(en, RenderData);

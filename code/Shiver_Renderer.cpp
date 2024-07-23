@@ -243,6 +243,9 @@ InitializeOpenGLRendererData(glrenderdata *RenderData, MemoryArena *TransientSto
             sh_glCreateProgram(RenderData->Shaders[BASIC].VertexShader, RenderData->Shaders[BASIC].FragmentShader);
     }
     
+
+    RenderData->ScreenSizeID = 
+        glGetUniformLocation(RenderData->Shaders[BASIC].Shader, "ScreenSize");
     RenderData->OrthographicMatrixID = 
         glGetUniformLocation(RenderData->Shaders[BASIC].Shader, "ProjectionMatrix");
     
@@ -328,6 +331,9 @@ sh_glRender(win32windowdata *WindowData, HWND WindowHandle, glrenderdata *Render
     
     RenderData->GameCamera.Matrix = CreateOrthographicMatrix(CameraInfo);
     glUniformMatrix4fv(RenderData->OrthographicMatrixID, 1, GL_FALSE, (const GLfloat *)&RenderData->GameCamera.Matrix.Elements[0][0]);
+    
+    vec2 ScreenSize = vec2{(real32)WindowData->SizeData.Width, (real32)WindowData->SizeData.Height};
+    glUniform2fv(RenderData->ScreenSizeID, 1, &ScreenSize.x);
     
     glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(renderertransform) * RenderData->TransformCounter, RenderData->RendererTransforms);
 
