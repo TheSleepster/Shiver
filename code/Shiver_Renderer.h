@@ -26,22 +26,6 @@ enum GlRendererTextures
     TEXTURE_COUNT
 };
 
-enum static_sprites
-{
-    SPRITE_NULL,
-    SPRITE_DICE,
-    SPRITE_FLOOR,
-    SPRITE_WALL,
-    SPRITE_COUNT
-};
-
-enum CameraState
-{
-    CAMERA_GAME,
-    CAMERA_UI,
-    CAMERA_EDITOR
-};
-
 struct win32windowdata
 {
     ivec4 SizeData;
@@ -77,7 +61,6 @@ struct static_sprite_data
 {
     ivec2 AtlasOffset;
     ivec2 SpriteSize;
-    real32 Rotation;
 };
 
 struct orthocamera2d
@@ -102,8 +85,9 @@ struct glrenderdata
     
     static_sprite_data StaticSprites[20];
     texture2d Textures[31];
-    
-    orthocamera2d Cameras[3];
+
+    orthocamera2d GameCamera;
+    orthocamera2d UICamera;
 };
 
 ///////////////////////////////////////////////////
@@ -114,13 +98,13 @@ CreateOrthographicMatrix(vec4 Data)
     mat4 Result = {};
     
     Result.Elements[3][0] = -(Data.Right + Data.Left) / (Data.Right - Data.Left);
-    Result.Elements[3][1] =  (Data.Top + Data.Bottom) / (Data.Top - Data.Bottom);
+    Result.Elements[3][1] = -(Data.Top + Data.Bottom) / (Data.Top - Data.Bottom);
     Result.Elements[3][2] =  0.0f;
+    Result.Elements[3][3] =  1.0f;
     
     Result.Elements[0][0] =  2.0f / (Data.Right - Data.Left);
     Result.Elements[1][1] =  2.0f / (Data.Top - Data.Bottom);
     Result.Elements[2][2] =  1.0f / (1.0f - 0.0f);
-    Result.Elements[3][3] =  1.0f;
     
     return(Result);
 }

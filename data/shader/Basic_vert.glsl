@@ -3,8 +3,7 @@ layout(std430, Binding = 0) buffer TransformSBO
     renderertransform Transforms[];
 };
 
-uniform vec2 ScreenSize;
-uniform mat4 CameraMatrix;
+uniform mat4 ProjectionMatrix;
 
 // Output
 layout(location = 0) out vec2 TextureCoordsOut;
@@ -39,6 +38,7 @@ void main()
     };
     
     vec2 VertexPos = Vertices[gl_VertexID];
-    gl_Position = CameraMatrix * vec4(VertexPos, 0.0f, 1.0f);
+    gl_Position = ProjectionMatrix * vec4(VertexPos, 0.0f, 1.0f);
+
     TextureCoordsOut = TextureCoords[gl_VertexID];
 }

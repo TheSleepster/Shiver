@@ -1,4 +1,5 @@
 #include "../data/shader/Shiver_SharedShaderHeader.h"
+#include "Shiver_Globals.h"
 #include "util/MemoryArena.h"
 #include "util/Math.h"
 #include "Shiver.h"
@@ -229,8 +230,8 @@ InitializeOpenGLRendererData(glrenderdata *RenderData, MemoryArena *TransientSto
     /////////////////////////////
     // NOTE(Sleepster): Shader setup
     {
-        RenderData->Shaders[BASIC].VertexShader.Filepath = "shader/Basic.vert";
-        RenderData->Shaders[BASIC].FragmentShader.Filepath = "shader/Basic.frag";
+        RenderData->Shaders[BASIC].VertexShader.Filepath = "shader/Basic_vert.glsl";
+        RenderData->Shaders[BASIC].FragmentShader.Filepath = "shader/Basic_frag.glsl";
         
         RenderData->Shaders[BASIC].VertexShader = 
             sh_glCreateShader(GL_VERTEX_SHADER, RenderData->Shaders[BASIC].VertexShader.Filepath);
@@ -242,10 +243,8 @@ InitializeOpenGLRendererData(glrenderdata *RenderData, MemoryArena *TransientSto
             sh_glCreateProgram(RenderData->Shaders[BASIC].VertexShader, RenderData->Shaders[BASIC].FragmentShader);
     }
     
-    RenderData->ScreenSizeID = 
-        glGetUniformLocation(RenderData->Shaders[BASIC].Shader, "ScreenSize");
     RenderData->OrthographicMatrixID = 
-        glGetUniformLocation(RenderData->Shaders[BASIC].Shader, "CameraMatrix");
+        glGetUniformLocation(RenderData->Shaders[BASIC].Shader, "ProjectionMatrix");
     
     GLuint VAO;
     glGenVertexArrays(1, &VAO);
@@ -268,8 +267,8 @@ InitializeOpenGLRendererData(glrenderdata *RenderData, MemoryArena *TransientSto
     RenderData->Shaders[BASIC].FragmentShader.LastWriteTime = 
         Win32GetLastWriteTime(RenderData->Shaders[BASIC].FragmentShader.Filepath);
     
-    RenderData->Cameras[CAMERA_GAME].Position = {160, -90};
-    RenderData->Cameras[CAMERA_GAME].Viewport = {WORLD_WIDTH, WORLD_HEIGHT};
+    RenderData->GameCamera.Position = {0.0f, 0.0f};
+    RenderData->GameCamera.Viewport = {WORLD_WIDTH, WORLD_HEIGHT};
     
     glEnable(GL_FRAMEBUFFER_SRGB);
     glDisable(0x809D); // Disabling multisampling
@@ -314,28 +313,23 @@ sh_glRender(win32windowdata *WindowData, HWND WindowHandle, glrenderdata *Render
 #endif
     ///////////////////////
     // NOTE(Sleepster): Actual renderering
-    HDC WindowDC = GetDC(WindowHandle);
     glClearColor(0.1f, 0.6f, 1.0f, 1.0f);
     glClearDepth(0.0f);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     glViewport(0, 0, WindowData->SizeData.Width, WindowData->SizeData.Height);
     
-    vec2 WindowSize = {(real32)WindowData->SizeData.Width, (real32)WindowData->SizeData.Height};
-    glUniform2fv(RenderData->ScreenSizeID, 1, &WindowSize.x);
-    
     vec4 CameraInfo = 
     {
-        RenderData->Cameras[CAMERA_GAME].Position.x - RenderData->Cameras[CAMERA_GAME].Viewport.x, 
-        RenderData->Cameras[CAMERA_GAME].Position.x + RenderData->Cameras[CAMERA_GAME].Viewport.x, 
-        RenderData->Cameras[CAMERA_GAME].Position.y - RenderData->Cameras[CAMERA_GAME].Viewport.y, 
-        RenderData->Cameras[CAMERA_GAME].Position.y + RenderData->Cameras[CAMERA_GAME].Viewport.y
+        RenderData->GameCamera.Position.x - RenderData->GameCamera.Viewport.x / 2, 
+        RenderData->GameCamera.Position.x + RenderData->GameCamera.Viewport.x / 2, 
+        RenderData->GameCamera.Position.y - RenderData->GameCamera.Viewport.y / 2, 
+        RenderData->GameCamera.Position.y + RenderData->GameCamera.Viewport.y / 2
     };
     
-    
-    RenderData->Cameras[CAMERA_GAME].Matrix = CreateOrthographicMatrix(CameraInfo);
-    glUniformMatrix4fv(RenderData->OrthographicMatrixID, 1, GL_FALSE, (const GLfloat *)&RenderData->Cameras[CAMERA_GAME].Matrix.Elements[0][0]);
+    RenderData->GameCamera.Matrix = CreateOrthographicMatrix(CameraInfo);
+    glUniformMatrix4fv(RenderData->OrthographicMatrixID, 1, GL_FALSE, (const GLfloat *)&RenderData->GameCamera.Matrix.Elements[0][0]);
     
     glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(renderertransform) * RenderData->TransformCounter, RenderData->RendererTransforms);
+
     glDrawArraysInstanced(GL_TRIANGLES, 0, 6, RenderData->TransformCounter);
-    SwapBuffers(WindowDC);
 }

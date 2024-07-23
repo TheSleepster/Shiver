@@ -8,66 +8,54 @@
 #include "Shiver_Renderer.h"
 #include "Shiver_AudioEngine.h"
 #include "Shiver_Globals.h"
+#include "util/Math.h"
 
 enum vertex_positions
 {
-    TOP_LEFT,
-    TOP_RIGHT,
-    BOTTOM_LEFT,
-    BOTTOM_RIGHT
-};
-
-enum collider_type
-{
-    POLYGON,
-    CIRCLE,
-    ELIPSE,
+    TOP_LEFT = 0,
+    TOP_RIGHT = 1,
+    BOTTOM_LEFT = 2,
+    BOTTOM_RIGHT = 3
 };
 
 enum entity_flags
 {
-    IS_SOLID  = 1 << 0,
-    IS_ACTOR  = 1 << 1,
-    IS_TILE   = 1 << 2,
-    IS_ACTIVE = 1 << 3,
+    IS_VALID  = 1 << 0,
+    IS_SOLID  = 1 << 1,
+    IS_ACTOR  = 1 << 2,
+    IS_TILE   = 1 << 3,
+    IS_ACTIVE = 1 << 4,
     ENTITY_FLAGS_COUNT
+};
+
+enum entity_archetype
+{
+    NIL = 0,
+    PLAYER = 1,
+    ROCK = 2,
+    TREE00 = 3,
+    TREE01 = 4,
+    ARCH_COUNT
 };
 
 // TODO(Sleepster): Sprite Directions
 struct entity
 {
+    entity_archetype Arch;
     uint32 Flags;
-    uint32 ColliderType;
     
-    static_sprites SpriteID;
     static_sprite_data Sprite;
     
     vec2 Size;
     vec2 Position;
     vec2 Velocity;
     vec2 Acceleration;
-    vec2 AppliedForce;
     
     real32 Speed;
     bool Collision;
     
     vec2 Vertex[MAX_COLLIDER_VERTS];
     int32 VertexCount;
-    
-    real32 Mass;
-    real32 InvMass;
-    
-    // NOTE(Sleepster): This is spooky
-    real32 Radius;
-    real32 Rotation;
-    real32 Inertia;
-    real32 InvInertia;
-    
-    real32 StaticFriction;
-    real32 DynamicFriction;
-    
-    real32 Density;
-    real32 Restitution;
 };
 
 struct simplex
@@ -110,21 +98,25 @@ struct game_memory
     MemoryArena PermanentStorage;
 };
 
+struct world 
+{
+    entity Entities[MAX_ENTITIES]; 
+};
+
 struct gamestate
 {
     KeyCodeID KeyCodeLookup[KEY_COUNT];
     Input GameInput;
-    
-    int32 CurrentEntityCount;
-    entity Entities[256];
+
+    world World;
 };
 
 ///////////////////////////////////////////////////
 // NOTE(Sleepster): Game Sprite Getter
 internal inline static_sprite_data
-sh_glGetSprite(static_sprites SpriteID, glrenderdata *RenderData)
+sh_glGetSprite(entity_archetype Arch, glrenderdata *RenderData)
 {
-    static_sprite_data Result = RenderData->StaticSprites[SpriteID];
+    static_sprite_data Result = RenderData->StaticSprites[Arch];
     return(Result);
 }
 
@@ -133,22 +125,22 @@ sh_glGetSprite(static_sprites SpriteID, glrenderdata *RenderData)
 internal void
 sh_glLoadSpriteSheet(glrenderdata *RenderData)
 {
-    RenderData->StaticSprites[SPRITE_NULL] = {{0, 0}, {0, 0}};
-    RenderData->StaticSprites[SPRITE_DICE] = {{0, 0}, {16, 16}};
-    RenderData->StaticSprites[SPRITE_FLOOR] = {{16, 0}, {16, 16}};
-    RenderData->StaticSprites[SPRITE_WALL] = {{32, 0}, {16, 16}};
+    RenderData->StaticSprites[NIL]    = {{0, 0}, {0, 0}};
+    RenderData->StaticSprites[PLAYER] = {{0, 0}, {12, 11}};
+    RenderData->StaticSprites[ROCK]   = {{16, 0}, {13, 9}};
+    RenderData->StaticSprites[TREE00] = {{32, 0}, {8, 15}};
 }
 
 // NOTE(Sleepster): The rotation is in Degrees
 internal void
-sh_glDrawStaticSprite2D(static_sprites SpriteID, vec2 Position, ivec2 Size, real32 Rotation, glrenderdata *RenderData)
+sh_glDrawStaticSprite2D(entity_archetype Arch, vec2 Position, glrenderdata *RenderData)
 {
-    static_sprite_data SpriteData = sh_glGetSprite(SpriteID, RenderData);
+    static_sprite_data SpriteData = sh_glGetSprite(Arch, RenderData);
     
     renderertransform Transform  = {};
     Transform.AtlasOffset = SpriteData.AtlasOffset;
     Transform.SpriteSize = SpriteData.SpriteSize;
-    Transform.Size = v2Cast(Size);
+    Transform.Size = v2Cast(RenderData->StaticSprites[Arch].SpriteSize);
     Transform.WorldPosition = Position - (Transform.Size / 2);
     
     RenderData->RendererTransforms[RenderData->TransformCounter++] = Transform;

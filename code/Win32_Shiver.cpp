@@ -457,6 +457,7 @@ WinMain(HINSTANCE hInstance,
                 
                 // TODO(Sleepster): Defer the rendering to a seperate thread so that way we are able to activate VSYNC without breaking everything
                 sh_glRender(&WindowData, WindowHandle, &RenderData, &GameMemory.TransientStorage);
+                SwapBuffers(WindowDC);
 
                 RenderData.TransformCounter = 0;
                 GameMemory.TransientStorage.Used = 0;

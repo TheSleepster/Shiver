@@ -38,6 +38,7 @@ global_variable const real32 EPSILON = 0.05f;
 
 global_variable const int32 MAX_COLLIDER_VERTS = 32;
 global_variable const int32 MAX_SIMPLEX_VERTS = 512;
+global_variable const int32 MAX_ENTITIES = 1024;
 
 
 #endif //_SHIVER__GLOBALS_H

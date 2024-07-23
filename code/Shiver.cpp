@@ -1,6 +1,7 @@
 #include "Intrinsics.h"
 #include "Shiver.h"
 #include "Shiver_AudioEngine.h"
+#include "Shiver_Globals.h"
 #include "util/ShiverArray.h"
 
 // Solving order
@@ -334,108 +335,8 @@ GJK(entity *A, entity *B)
 }
 
 internal void
-UpdateEntityColliderData(entity *Entity)
+UpdatePlayerPosition(entity *Player, gamestate *State, time Time)
 {
-    Entity->Vertex[TOP_LEFT]     = {Entity->Position};
-    Entity->Vertex[TOP_RIGHT]    = {Entity->Position.x + Entity->Size.x, Entity->Position.y};
-    Entity->Vertex[BOTTOM_LEFT]  = {Entity->Position.x, Entity->Position.y + Entity->Size.y};
-    Entity->Vertex[BOTTOM_RIGHT] = {Entity->Position + Entity->Size};
-}
-// NOTE(Sleepster): END OF GJK
-
-// TODO(Sleepster): Make it so that we are not making a new sprite every frame, only when we need to actually make it
-
-internal entity
-CreateEntity(static_sprites SpriteID, vec2 Position, vec2 Size, glrenderdata *RenderData, gamestate *State)
-{
-    entity Entity = {};
-    switch(SpriteID)
-    {
-        case SPRITE_DICE:
-        {
-            Entity.Flags = IS_ACTOR|IS_ACTIVE;
-            Entity.Restitution = 0.0f;
-            Entity.Mass = 100.0f;
-            Entity.InvMass = 1 / Entity.Mass;
-            Entity.Speed = 0.5f;
-        }break;
-        case SPRITE_FLOOR:
-        {
-            Entity.Flags = IS_TILE|IS_ACTIVE;
-            Entity.Restitution = 0.0f;
-            Entity.Mass = 10.0f;
-            Entity.InvMass = 1 / Entity.Mass;
-        }break;
-        case SPRITE_WALL:
-        {
-            Entity.Flags = IS_SOLID|IS_ACTIVE;
-            Entity.Restitution = 0.0f;
-            Entity.Mass = 10.0f;
-            Entity.InvMass = 1 / Entity.Mass;
-        }break;
-    }
-    
-    Entity.SpriteID = SpriteID;
-    Entity.Sprite = RenderData->StaticSprites[SpriteID];
-    Entity.Position = Position;
-    Entity.Size = Size;
-    
-    Entity.Vertex[TOP_LEFT]     = {Entity.Position};
-    Entity.Vertex[TOP_RIGHT]    = {Entity.Position.x + Entity.Size.x, Entity.Position.y};
-    Entity.Vertex[BOTTOM_LEFT]  = {Entity.Position.x, Entity.Position.y + Entity.Size.y};
-    Entity.Vertex[BOTTOM_RIGHT] = {Entity.Position + Entity.Size};
-    Entity.VertexCount = 4;
-    
-    State->CurrentEntityCount++;
-    return(Entity);
-}
-
-internal inline void
-DrawEntityStaticSprite2D(entity Entity, glrenderdata *RenderData)
-{
-    sh_glDrawStaticSprite2D(Entity.SpriteID, Entity.Position, iv2Cast(Entity.Size), 0.0f, RenderData);
-}
-
-internal inline entity
-DeleteEntity(void)
-{
-    entity Entity = {};
-    return(Entity);
-}
-
-internal void
-DrawTilemap(const uint8 Tilemap[TILEMAP_SIZE_Y][TILEMAP_SIZE_X], glrenderdata *RenderData, gamestate *State)
-{
-    for(int32 Row = 0;
-        Row < TILEMAP_SIZE_Y;
-        ++Row)
-    {
-        for(int32 Column = 0;
-            Column < TILEMAP_SIZE_X;
-            ++Column)
-        {
-            switch(Tilemap[Row][Column])
-            {
-                case 0:
-                {
-                    State->Entities[State->CurrentEntityCount] =
-                        CreateEntity(SPRITE_FLOOR, {real32(Column * TILESIZE), real32(Row * TILESIZE)}, {16, 16}, RenderData, State);
-                }break;
-                case 1:
-                {
-                    State->Entities[State->CurrentEntityCount] =
-                        CreateEntity(SPRITE_WALL, {real32(Column * TILESIZE), real32(Row * TILESIZE)}, {16, 16}, RenderData, State);
-                }break;
-            }
-        }
-    }
-}
-
-internal void
-UpdatePlayerPosition(gamestate *State, time Time)
-{
-    entity *Player = &State->Entities[1];
-    
     if(IsGameKeyDown(MOVE_UP, &State->GameInput))
     {
         Player->Acceleration.y = -1.0f * Time.DeltaTime;
@@ -472,36 +373,119 @@ UpdatePlayerPosition(gamestate *State, time Time)
     Player->Position = v2Lerp(Player->Position, OldPlayerP, Time.DeltaTime);
 }
 
+internal void
+DrawTilemap(const uint8 Tilemap[TILEMAP_SIZE_Y][TILEMAP_SIZE_X], glrenderdata *RenderData, gamestate *State)
+{
+}
+
+internal void
+UpdateEntityColliderData(entity *Entity)
+{
+    Entity->Vertex[TOP_LEFT]     = {Entity->Position};
+    Entity->Vertex[TOP_RIGHT]    = {Entity->Position.x + Entity->Size.x, Entity->Position.y};
+    Entity->Vertex[BOTTOM_LEFT]  = {Entity->Position.x, Entity->Position.y + Entity->Size.y};
+    Entity->Vertex[BOTTOM_RIGHT] = {Entity->Position + Entity->Size};
+}
+// NOTE(Sleepster): END OF GJK
+
+// TODO(Sleepster): Make it so that we are not making a new sprite every frame, only when we need to actually make it
+
+internal inline void
+DrawEntityStaticSprite2D(entity *Entity, glrenderdata *RenderData)
+{
+    sh_glDrawStaticSprite2D(Entity->Arch, Entity->Position, RenderData);
+}
+
+internal void 
+SetupPlayer(entity *Entity, glrenderdata *RenderData)
+{
+    Entity->Arch = PLAYER;
+    Entity->Flags = IS_ACTIVE|IS_VALID|IS_ACTOR;
+
+    Entity->Position = vec2{0, 0};
+    Entity->Velocity = vec2{0.0f, 0.0f};
+    Entity->Speed = 2.0f;
+            
+    Entity->Vertex[TOP_LEFT]     = {Entity->Position};
+    Entity->Vertex[TOP_RIGHT]    = {Entity->Position.x + Entity->Size.x, Entity->Position.y};
+    Entity->Vertex[BOTTOM_LEFT]  = {Entity->Position.x, Entity->Position.y + Entity->Size.y};
+    Entity->Vertex[BOTTOM_RIGHT] = {Entity->Position + Entity->Size};
+    Entity->VertexCount = 4;
+}
+
+internal void 
+SetupRock(entity *Entity, glrenderdata *RenderData)
+{
+    Entity->Arch = ROCK;
+    Entity->Flags = IS_ACTIVE|IS_VALID|IS_ACTOR;
+
+    Entity->Position = vec2{WORLD_WIDTH / 2, WORLD_HEIGHT / 2};
+    Entity->Velocity = vec2{0.0f, 0.0f};
+    Entity->Speed = 2.0f;
+            
+    Entity->Vertex[TOP_LEFT]     = {Entity->Position};
+    Entity->Vertex[TOP_RIGHT]    = {Entity->Position.x + Entity->Size.x, Entity->Position.y};
+    Entity->Vertex[BOTTOM_LEFT]  = {Entity->Position.x, Entity->Position.y + Entity->Size.y};
+    Entity->Vertex[BOTTOM_RIGHT] = {Entity->Position + Entity->Size};
+    Entity->VertexCount = 4;
+}
+
+internal void 
+SetupTree(entity *Entity, glrenderdata *RenderData)
+{
+    Entity->Arch = TREE00;
+    Entity->Flags = IS_ACTIVE|IS_VALID|IS_ACTOR;
+
+    Entity->Position = vec2{WORLD_WIDTH / 2, WORLD_HEIGHT / 2};
+    Entity->Velocity = vec2{0.0f, 0.0f};
+    Entity->Speed = 2.0f;
+            
+    Entity->Vertex[TOP_LEFT]     = {Entity->Position};
+    Entity->Vertex[TOP_RIGHT]    = {Entity->Position.x + Entity->Size.x, Entity->Position.y};
+    Entity->Vertex[BOTTOM_LEFT]  = {Entity->Position.x, Entity->Position.y + Entity->Size.y};
+    Entity->Vertex[BOTTOM_RIGHT] = {Entity->Position + Entity->Size};
+    Entity->VertexCount = 4;
+}
+
+internal entity*
+CreateEntity(world *World)
+{
+    entity *Result = {};
+    for(uint32 EntityIndex = 0;
+        EntityIndex < MAX_ENTITIES;
+        ++EntityIndex)
+    {
+        entity *Found = &World->Entities[EntityIndex];
+        if(!(Found->Flags & IS_VALID))
+        {
+            Result = Found; 
+            break;
+        }
+    }
+    Assert(Result, "No more entities\n");
+    Result->Flags = IS_VALID;
+    return(Result);
+}
+
+internal inline entity
+DeleteEntity(entity *Entity)
+{
+    memset(Entity, 0, sizeof(struct entity));
+}
+
 extern "C"
 GAME_ON_AWAKE(GameOnAwake)
 {
     AudioSubsystem = AudioEngineIn;
-    const uint8 Tilemap[TILEMAP_SIZE_Y][TILEMAP_SIZE_X] =
-    {
-        {1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1},
-        {1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
-        {1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
-        {1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1},
-        {1,0,0,0, 1,1,1,0, 0,1,1,0, 0,0,0,0, 1},
-        {1,0,0,0, 1,0,0,0, 0,0,1,0, 0,0,0,0, 1},
-        {1,0,0,0, 1,0,0,0, 0,0,1,0, 0,0,0,0, 1},
-        {1,0,0,0, 1,0,0,0, 0,0,1,0, 0,0,0,0, 1},
-        {1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1, 1}
-    };
-    
     sh_glLoadSpriteSheet(RenderData);
-    
-    State->CurrentEntityCount = 0;
-    State->Entities[0] = {};
-    State->Entities[1] = CreateEntity(SPRITE_DICE, {160, 30}, {16, 16}, RenderData, State);
-    DrawTilemap(Tilemap, RenderData, State);
-    
+
+    entity *en = CreateEntity(&State->World);
+    SetupPlayer(en, RenderData);
+
     // NOTE(Sleepster): If we ware playing a background track, hot reloading is dead
     //sh_FMODPlaySoundFX(AudioSubsystem->SoundFX[TEST_MUSIC]);
     //sh_PlayBackgroundTrack(SUNKEN_SEA);
 }
-
-
 
 // NOTE(Sleepster): Make a function that adds to the players speed in the fixed time step to try and fix this weird collision jank
 // The idea is that this will add to the velocity here, independant of the framerate so that the player will move the same regardless
@@ -512,41 +496,37 @@ extern "C"
 GAME_FIXED_UPDATE(GameFixedUpdate)
 {
     // NOTE(Sleepster): For some reason a "for" loop being present within this fixedupdate causes the game to break
-    UpdatePlayerPosition(State, Time);
+    for(uint32 EntityIndex = 0;
+        EntityIndex < MAX_ENTITIES;
+        ++EntityIndex)
+    {
+        entity *Temp = &State->World.Entities[EntityIndex];
+        if((Temp->Flags & IS_VALID) && (Temp->Arch = PLAYER))
+        {
+            UpdatePlayerPosition(Temp, State, Time);
+        }
+    }
 }
 
 extern "C"
 GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
 {
-    RenderData->Cameras[CAMERA_GAME].Position = {130, -60};
-    
-    for(int32 EntityIndex = 2;
-        EntityIndex <= State->CurrentEntityCount;
+
+    for(uint32 EntityIndex = 0;
+        EntityIndex < MAX_ENTITIES;
         ++EntityIndex)
     {
-        if((State->Entities[EntityIndex].Flags & IS_SOLID))
+        entity *Temp = &State->World.Entities[EntityIndex];
+        if(Temp->Flags & IS_VALID)
         {
-            gjk_epa_data CollisionData = GJK_EPA(&State->Entities[1], &State->Entities[EntityIndex]);
-            if(CollisionData.Collision)
+            switch(Temp->Arch)
             {
-                ResolveSolidCollision(&State->Entities[1], CollisionData);
-                sh_PlaySound("boop");
+                case PLAYER:
+                {
+                }break;
             }
+            DrawEntityStaticSprite2D(Temp, RenderData);
+            UpdateEntityColliderData(Temp);
         }
-    }
-    
-    for(int32 EntityIndex = 1;
-        EntityIndex <= State->CurrentEntityCount;
-        ++EntityIndex)
-    {
-        UpdateEntityColliderData(&State->Entities[EntityIndex]);
-    }
-    
-    // NOTE(Sleepster): Move this out of here? Seems a little odd the game would be doing the rendering
-    for(int32 EntityIndex = 1;
-        EntityIndex <= State->CurrentEntityCount;
-        ++EntityIndex)
-    {
-        DrawEntityStaticSprite2D(State->Entities[EntityIndex], RenderData);
     }
 }
