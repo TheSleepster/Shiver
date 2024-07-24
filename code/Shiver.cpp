@@ -468,9 +468,13 @@ MouseToWorldSpace(Input *GameInput, win32windowdata *WindowData, glrenderdata *R
 {
     KeyboardInput *MouseData = &GameInput->Keyboard;
 
-    vec2 NDC = {(MouseData->CurrentMouse.x / WindowData->SizeData.Width * 0.5f) - 1.0f, 
+    if(WindowData->SizeData.Width != 0)
+    {
+        vec2 NDC = {(MouseData->CurrentMouse.x / WindowData->SizeData.Width * 0.5f) - 1.0f, 
                  1.0f - (MouseData->CurrentMouse.y / WindowData->SizeData.Height * 0.5f)};
-    return(NDC);
+        return(NDC);
+    }
+    return(vec2{0.0f, 0.0f});
 }
 
 extern "C"
@@ -493,7 +497,7 @@ GAME_ON_AWAKE(GameOnAwake)
     SetupPlayer(en2, RenderData);
 
     for(uint32 Index = 0;
-        Index < 20;
+        Index < 200;
         ++Index)
     {
         entity *en = CreateEntity(&State->World);

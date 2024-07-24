@@ -154,7 +154,8 @@ sh_glDrawStaticSprite2D(entity_archetype Arch, vec2 Position, glrenderdata *Rend
 internal inline uint64 
 GetRandom()
 {
-    uint64 rng_state = 1;
+    // NOTE(Sleepster): Look Ma, the only local_perist(s) in the entire program!
+    local_persist uint64 rng_state = 1;
     uint64_t x = rng_state;
     x ^= x << 13;
     x ^= x >> 7;
