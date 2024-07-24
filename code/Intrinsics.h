@@ -64,6 +64,7 @@ typedef double real64;
 #define SHIVER_SLOW 1
 #define FMOD 0
 
+// NOTE(Sleepster): Length Based Strings
 struct string
 {
     uint8 *Data;

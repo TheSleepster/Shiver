@@ -19,7 +19,6 @@ internal void
 ResolveSolidCollision(entity *A, gjk_epa_data Data)
 {
     vec2 PenVector = Data.CollisionNormal * (real32)Data.Depth;
-    A->Velocity = v2Reflect(A->Velocity, Data.CollisionNormal)*0.5f;
     
     if(Data.CollisionNormal.y == 1)
     {
@@ -38,8 +37,6 @@ ResolveSolidCollision(entity *A, gjk_epa_data Data)
     {
         A->Position.x += real32(EPSILON + Data.Depth);
     }
-    
-    A->Velocity = {0.0f, 0.0f};
 }
 
 // NOTE(Sleepster): This function updates both the simplex and the direction vector
@@ -360,15 +357,12 @@ UpdatePlayerPosition(entity *Player, gamestate *State, time Time)
     }
 
     v2Normalize(Player->Acceleration);
-    
     vec2 OldPlayerP = Player->Position;
-    vec2 OldPlayerV = Player->Velocity;
-    
     real32 Friction = 0.9f;
 
     vec2 NextPos = { Player->Position.x + (Player->Position.x - OldPlayerP.x) + (Player->Speed * Player->Acceleration.x) * Square(Time.DeltaTime),
                      Player->Position.y + (Player->Position.y - OldPlayerP.y) + (Player->Speed * Player->Acceleration.y) * Square(Time.DeltaTime)};
-    Player->Position = NextPos;
+    Player->Position = v2Lerp(NextPos, OldPlayerP, Time.DeltaTime);
 }
 
 internal void
@@ -401,7 +395,6 @@ SetupPlayer(entity *Entity, glrenderdata *RenderData)
     Entity->Flags = IS_ACTIVE|IS_VALID|IS_ACTOR;
 
     Entity->Position = vec2{0, 0};
-    Entity->Velocity = vec2{0.0f, 0.0f};
     Entity->Speed = 10.0f;
             
     Entity->Vertex[TOP_LEFT]     = {Entity->Position};
@@ -417,8 +410,7 @@ SetupRock(entity *Entity, glrenderdata *RenderData)
     Entity->Arch = ROCK;
     Entity->Flags = IS_ACTIVE|IS_VALID|IS_ACTOR;
 
-    Entity->Position = vec2{WORLD_WIDTH / 2, WORLD_HEIGHT / 2};
-    Entity->Velocity = vec2{0.0f, 0.0f};
+    Entity->Position = vec2{0, 0};
     Entity->Speed = 2.0f;
             
     Entity->Vertex[TOP_LEFT]     = {Entity->Position};
@@ -434,8 +426,8 @@ SetupTree(entity *Entity, glrenderdata *RenderData)
     Entity->Arch = TREE00;
     Entity->Flags = IS_ACTIVE|IS_VALID|IS_ACTOR;
 
+    Entity->Position = vec2{0, 0};
     Entity->Position = vec2{WORLD_WIDTH / 2, WORLD_HEIGHT / 2};
-    Entity->Velocity = vec2{0.0f, 0.0f};
     Entity->Speed = 1.0f;
             
     Entity->Vertex[TOP_LEFT]     = {Entity->Position};
@@ -487,8 +479,19 @@ GAME_ON_AWAKE(GameOnAwake)
         DeleteEntity(temp);
     }
 
-    entity *en = CreateEntity(&State->World);
-    SetupPlayer(en, RenderData);
+    entity *en2 = CreateEntity(&State->World);
+    SetupPlayer(en2, RenderData);
+
+    for(uint32 Index = 0;
+        Index < 20;
+        ++Index)
+    {
+        entity *en = CreateEntity(&State->World);
+        SetupRock(en, RenderData);
+        en->Position = vec2{GetRandomReal32_Range(-WORLD_WIDTH, WORLD_WIDTH), GetRandomReal32_Range(-WORLD_HEIGHT, WORLD_HEIGHT)};
+    }
+
+    sh_glSetClearColor(RenderData, COLOR_TEAL);
 
     // NOTE(Sleepster): If we ware playing a background track, hot reloading is dead
     //sh_FMODPlaySoundFX(AudioSubsystem->SoundFX[TEST_MUSIC]);
@@ -509,7 +512,7 @@ GAME_FIXED_UPDATE(GameFixedUpdate)
         ++EntityIndex)
     {
         entity *Temp = &State->World.Entities[EntityIndex];
-        if((Temp->Flags & IS_VALID) && (Temp->Arch = PLAYER))
+        if((Temp->Flags & IS_VALID) && (Temp->Arch == PLAYER))
         {
             UpdatePlayerPosition(Temp, State, Time);
         }
@@ -519,20 +522,18 @@ GAME_FIXED_UPDATE(GameFixedUpdate)
 extern "C"
 GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
 {
-
     for(uint32 EntityIndex = 0;
         EntityIndex < MAX_ENTITIES;
         ++EntityIndex)
     {
         entity *Temp = &State->World.Entities[EntityIndex];
+        if(Temp->Arch == PLAYER)
+        {
+            v2Approach(&RenderData->GameCamera.Position, Temp->Position, 1.0f, Time.DeltaTime);
+        }
+
         if(Temp->Flags & IS_VALID)
         {
-            switch(Temp->Arch)
-            {
-                case PLAYER:
-                {
-                }break;
-            }
             DrawEntityStaticSprite2D(Temp, RenderData);
             UpdateEntityColliderData(Temp);
         }

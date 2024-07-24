@@ -625,6 +625,29 @@ v2Convert(ivec2 A)
     return(vec2{real32(A.x), real32(A.y)});
 }
 
+internal inline bool
+Equals(real32 A, real32 B, real32 Tolerance)
+{
+    return(fabs(A - B) <= Tolerance);
+}
+
+internal inline void
+Approach(real32 *Value, real32 Target, real32 Rate, real32 Delta_t)
+{
+    *Value += real32((Target - *Value) * (1.0 - pow(2.0f, -Rate * Delta_t)));
+    if(Equals(*Value, Target, 0.001f))
+    {
+        *Value = Target;
+    }
+}
+
+internal inline void
+v2Approach(vec2 *Value, vec2 Target, real32 Rate, real32 Delta_t)
+{
+    Approach(&(Value->x), Target.x, Rate, Delta_t);
+    Approach(&(Value->y), Target.y, Rate, Delta_t);
+}
+
 // FLOAT VECTOR 3
 
 struct vec3

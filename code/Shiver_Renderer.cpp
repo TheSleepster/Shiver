@@ -277,6 +277,8 @@ InitializeOpenGLRendererData(glrenderdata *RenderData, MemoryArena *TransientSto
     glDisable(0x809D); // Disabling multisampling
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_GREATER);
+
+    sh_glSetClearColor(RenderData, COLOR_TEAL);
     
     glUseProgram(RenderData->Shaders[BASIC].Shader);
 }
@@ -316,7 +318,7 @@ sh_glRender(win32windowdata *WindowData, HWND WindowHandle, glrenderdata *Render
 #endif
     ///////////////////////
     // NOTE(Sleepster): Actual renderering
-    glClearColor(0.1f, 0.6f, 1.0f, 1.0f);
+    glClearColor(RenderData->ClearColor.r, RenderData->ClearColor.g, RenderData->ClearColor.b, RenderData->ClearColor.a);
     glClearDepth(0.0f);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     glViewport(0, 0, WindowData->SizeData.Width, WindowData->SizeData.Height);

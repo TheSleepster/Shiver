@@ -457,6 +457,8 @@ WinMain(HINSTANCE hInstance,
                 }
                 Time.Alpha = Accumulator / Time.DeltaTime;
                 
+                // NOTE(Sleepster): RNG SEED
+
                 // UPDATE GAME (Framerate Independant)
                 Game.UnlockedUpdate(&State, &RenderData, Time, &GameMemory);
                 

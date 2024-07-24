@@ -48,7 +48,6 @@ struct entity
     
     vec2 Size;
     vec2 Position;
-    vec2 Velocity;
     vec2 Acceleration;
     
     real32 Speed;
@@ -90,6 +89,7 @@ struct time
     real32 CurrentTime;
     real32 NextTimestep;
     real32 Alpha;
+    uint32 Seed;
 };
 
 struct game_memory
@@ -127,8 +127,8 @@ sh_glLoadSpriteSheet(glrenderdata *RenderData)
 {
     RenderData->StaticSprites[NIL]    = {{0, 0}, {0, 0}};
     RenderData->StaticSprites[PLAYER] = {{0, 0}, {12, 11}};
-    RenderData->StaticSprites[ROCK]   = {{16, 0}, {13, 9}};
-    RenderData->StaticSprites[TREE00] = {{32, 0}, {8, 15}};
+    RenderData->StaticSprites[ROCK]   = {{16, 0}, {12, 8}};
+    RenderData->StaticSprites[TREE00] = {{32, 0}, {7, 15}};
 }
 
 // NOTE(Sleepster): The rotation is in Degrees
@@ -144,6 +144,34 @@ sh_glDrawStaticSprite2D(entity_archetype Arch, vec2 Position, glrenderdata *Rend
     Transform.WorldPosition = Position - (Transform.Size / 2);
     
     RenderData->RendererTransforms[RenderData->TransformCounter++] = Transform;
+}
+
+// NOTE(Sleepster): Random Number Generation stuff
+#define RAND_MAX_64 0xFFFFFFFFFFFFFFFFull
+#define MULTIPLIER 6364136223846793005ull
+#define INCREMENT 1442695040888963407ull 
+
+internal inline uint64 
+GetRandom()
+{
+    local_persist uint64 rng_state = 1;
+    uint64_t x = rng_state;
+    x ^= x << 13;
+    x ^= x >> 7;
+    x ^= x << 17;
+    rng_state = x;
+    return x;}
+
+internal inline real32
+GetRandomReal32()
+{
+    return((real32)GetRandom()/(real32)UINT64_MAX);
+}
+
+internal inline real32
+GetRandomReal32_Range(real32 Minimum, real32 Maximum)
+{
+    return((Maximum - Minimum)*GetRandomReal32() + Minimum);
 }
 
 #define GAME_UPDATE_AND_RENDER(name) void name(gamestate *State, glrenderdata *RenderData, time Time, game_memory *Memory)

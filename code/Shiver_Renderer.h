@@ -12,6 +12,13 @@
 
 #include "../data/deps/OpenGL/GLL.h"
 
+global_variable const vec4 COLOR_WHITE = {1.0f, 1.0f, 1.0f, 1.0f};
+global_variable const vec4 COLOR_RED = {1.0f, 0.0f, 0.0f, 1.0f};
+global_variable const vec4 COLOR_GREEN = {0.0f, 1.0f, 0.0f, 1.0f};
+global_variable const vec4 COLOR_BLUE = {0.0f, 0.0f, 1.0f, 1.0f};
+global_variable const vec4 COLOR_TEAL = {0.1f, 0.6f, 1.0f, 1.0f};
+
+
 enum ShaderPrograms
 {
     BASIC,
@@ -88,7 +95,15 @@ struct glrenderdata
 
     orthocamera2d GameCamera;
     orthocamera2d UICamera;
+
+    vec4 ClearColor;
 };
+
+internal void 
+sh_glSetClearColor(glrenderdata *RenderData, vec4 Color)
+{
+    RenderData->ClearColor = Color;
+}
 
 ///////////////////////////////////////////////////
 // NOTE(Sleepster): Matrix stuffs
