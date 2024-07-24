@@ -737,6 +737,18 @@ operator*(vec3 A, real32 B)
 }
 
 internal inline vec3
+operator*=(vec3 A, real32 B)
+{
+    vec3 Result = {};
+
+    Result.x = A.x * B;
+    Result.y = A.y * B;
+    Result.z = A.x * B;
+
+    return(Result);
+}
+
+internal inline vec3
 operator/(vec3 A, vec3 B)
 {
     vec3 Result = {};
@@ -956,11 +968,13 @@ union vec4
 {
     real32 Elements[4];
     
-    struct
+    union 
     {
-        real32 x;
-        real32 y;
-        real32 z;
+        vec3 xyz;
+        struct 
+        {
+            real32 x, y, z;      
+        };
         real32 w;
     };
     
@@ -1077,6 +1091,16 @@ operator/(vec4 A, real32 B)
 }
 
 // VECTOR4 FUNCTIONS
+internal inline vec4
+v4Create(vec3 A, real32 W)
+{
+    vec4 Result = {};
+
+    Result.xyz = A;
+    Result.w = W;
+
+    return(Result);
+}
 
 // 4x4 FLOAT MATRIX
 
@@ -1088,8 +1112,45 @@ union mat4
 
 // 4x4 FLOAT MATRIX OPERATORS
 
+internal inline mat4
+operator+(mat4 A, mat4 B)
+{
+    mat4 Result = {};
+    
+    Result.Columns[0] = A.Columns[0] + B.Columns[0];
+    Result.Columns[1] = A.Columns[1] + B.Columns[1];
+    Result.Columns[2] = A.Columns[2] + B.Columns[2];
+    Result.Columns[3] = A.Columns[3] + B.Columns[3];
+}
+
+internal inline mat4
+operator-(mat4 A, mat4 B)
+{
+    mat4 Result = {};
+    
+    Result.Columns[0] = A.Columns[0] - B.Columns[0];
+    Result.Columns[1] = A.Columns[1] - B.Columns[1];
+    Result.Columns[2] = A.Columns[2] - B.Columns[2];
+    Result.Columns[3] = A.Columns[3] - B.Columns[3];
+}
+
+// 4x4 FLOAT MATRIX FUNCTIONS
+
+internal inline real32
+mat4Determinant(mat4 A)
+{
+    mat4 Result = {};
+    
+    vec3 Temp1 = v3Cross(A.Columns[0].xyz, A.Columns[1].xyz);
+    vec3 Temp2 = v3Cross(A.Columns[2].xyz, A.Columns[3].xyz);
+    vec3 Temp3 =  (A.Columns[0].xyz * A.Columns[1].w) - (A.Columns[1].xyz * A.Columns[0].w);
+    vec3 Temp4 = (A.Columns[2].xyz * A.Columns[3].w) - (A.Columns[3].xyz * A.Columns[2].w);
+
+    return(v3Dot(Temp1, Temp4) + v3Dot(Temp2, Temp3));
+}
+
 internal inline vec4
-v4LinearCombine(vec4 A, mat4 B)
+mat4Transform(vec4 A, mat4 B)
 {
     vec4 Result = {};
     
@@ -1116,33 +1177,9 @@ v4LinearCombine(vec4 A, mat4 B)
     return(Result);
 }
 
-internal inline mat4
-operator+(mat4 A, mat4 B)
-{
-    mat4 Result = {};
-    
-    Result.Columns[0] = A.Columns[0] + B.Columns[0];
-    Result.Columns[1] = A.Columns[1] + B.Columns[1];
-    Result.Columns[2] = A.Columns[2] + B.Columns[2];
-    Result.Columns[3] = A.Columns[3] + B.Columns[3];
-}
-
-internal inline mat4
-operator-(mat4 A, mat4 B)
-{
-    mat4 Result = {};
-    
-    Result.Columns[0] = A.Columns[0] - B.Columns[0];
-    Result.Columns[1] = A.Columns[1] - B.Columns[1];
-    Result.Columns[2] = A.Columns[2] - B.Columns[2];
-    Result.Columns[3] = A.Columns[3] - B.Columns[3];
-}
-
-// 4x4 FLOAT MATRIX FUNCTIONS
-
 // TODO : SIMD for this please omfg this is expensive
 internal inline mat4
-m4Transpose(mat4 A)
+mat4Transpose(mat4 A)
 {
     mat4 Result = {};
     
@@ -1169,7 +1206,7 @@ m4Transpose(mat4 A)
 // TODO : Running out of "Check SIMD expensive"'s
 
 internal inline mat4
-DivideM4Real(mat4 A, real32 B)
+mat4ScalerDiv(mat4 A, real32 B)
 {
     mat4 Result = {};
     
@@ -1194,7 +1231,7 @@ DivideM4Real(mat4 A, real32 B)
 }
 
 internal inline mat4
-MultiplyM4Real(mat4 A, real32 B)
+mat4ScalerMult(mat4 A, real32 B)
 {
     mat4 Result = {};
     
@@ -1219,15 +1256,40 @@ MultiplyM4Real(mat4 A, real32 B)
 }
 
 internal inline mat4
-MultiplyM4M4(mat4 A, mat4 B)
+mat4Multiply(mat4 A, mat4 B)
 {
     mat4 Result = {};
     
-    Result.Columns[0] = v4LinearCombine(B.Columns[0], A);
-    Result.Columns[1] = v4LinearCombine(B.Columns[1], A);
-    Result.Columns[2] = v4LinearCombine(B.Columns[2], A);
-    Result.Columns[3] = v4LinearCombine(B.Columns[3], A);
+    Result.Columns[0] = mat4Transform(B.Columns[0], A);
+    Result.Columns[1] = mat4Transform(B.Columns[1], A);
+    Result.Columns[2] = mat4Transform(B.Columns[2], A);
+    Result.Columns[3] = mat4Transform(B.Columns[3], A);
     
+    return(Result);
+}
+
+internal mat4
+mat4Inverse(mat4 A)
+{
+    mat4 Result = {};
+
+    vec3 C01 = v3Cross(A.Columns[0].xyz, A.Columns[1].xyz);
+    vec3 C23 = v3Cross(A.Columns[2].xyz, A.Columns[3].xyz);
+    vec3 B10 =  (A.Columns[0].xyz * A.Columns[1].w) - (A.Columns[1].xyz * A.Columns[0].w);
+    vec3 B32 = (A.Columns[2].xyz * A.Columns[3].w) - (A.Columns[3].xyz * A.Columns[2].w);
+
+    real32 InvDeterminant = 1.0f / (v3Dot(C01, B32) + v3Dot(C23, B10));
+
+    C01 *= InvDeterminant;
+    C23 *= InvDeterminant;
+    B10 *= InvDeterminant;
+    B32 *= InvDeterminant;
+
+    Result.Columns[0] = v4Create((v3Cross(A.Columns[1].xyz, B32) + (C23 * A.Columns[1].w)), -(v3Dot(A.Columns[1].xyz, C23)));
+    Result.Columns[1] = v4Create((v3Cross(B32, A.Columns[0].xyz) - (C23 * A.Columns[0].w)), +(v3Dot(A.Columns[0].xyz, C23)));
+    Result.Columns[2] = v4Create((v3Cross(A.Columns[3].xyz, B10) + (C01 * A.Columns[3].w)), -(v3Dot(A.Columns[3].xyz, C01)));
+    Result.Columns[3] = v4Create((v3Cross(B10, A.Columns[2].xyz) - (C01 * A.Columns[2].w)), +(v3Dot(A.Columns[2].xyz, C01)));
+
     return(Result);
 }
 // TODO : Finish all of the 4x4 matrix calcs

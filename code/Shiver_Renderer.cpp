@@ -20,7 +20,6 @@
 
 // GAME HEADERS
 #include "Win32_Shiver.h"
-#include "Shiver_Renderer.h"
 
 internal void
 Win32InitializeOpenGLFunctionPointers(WNDCLASS Window, HINSTANCE hInstance, 

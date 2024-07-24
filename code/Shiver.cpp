@@ -463,6 +463,16 @@ DeleteEntity(entity *Entity)
     memset(Entity, 0, sizeof(struct entity));
 }
 
+internal vec2
+MouseToWorldSpace(Input *GameInput, win32windowdata *WindowData, glrenderdata *RenderData)
+{
+    KeyboardInput *MouseData = &GameInput->Keyboard;
+
+    vec2 NDC = {(MouseData->CurrentMouse.x / WindowData->SizeData.Width * 0.5f) - 1.0f, 
+                 1.0f - (MouseData->CurrentMouse.y / WindowData->SizeData.Height * 0.5f)};
+    return(NDC);
+}
+
 extern "C"
 GAME_ON_AWAKE(GameOnAwake)
 {
@@ -515,6 +525,7 @@ GAME_FIXED_UPDATE(GameFixedUpdate)
         if((Temp->Flags & IS_VALID) && (Temp->Arch == PLAYER))
         {
             UpdatePlayerPosition(Temp, State, Time);
+            v2Approach(&RenderData->GameCamera.Position, Temp->Position, 1.0f, Time.DeltaTime);
         }
     }
 }
@@ -522,16 +533,13 @@ GAME_FIXED_UPDATE(GameFixedUpdate)
 extern "C"
 GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
 {
+    MouseToWorldSpace(&State->GameInput, WindowData, RenderData);
+
     for(uint32 EntityIndex = 0;
         EntityIndex < MAX_ENTITIES;
         ++EntityIndex)
     {
         entity *Temp = &State->World.Entities[EntityIndex];
-        if(Temp->Arch == PLAYER)
-        {
-            v2Approach(&RenderData->GameCamera.Position, Temp->Position, 1.0f, Time.DeltaTime);
-        }
-
         if(Temp->Flags & IS_VALID)
         {
             DrawEntityStaticSprite2D(Temp, RenderData);

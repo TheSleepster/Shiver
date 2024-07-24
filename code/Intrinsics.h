@@ -32,6 +32,11 @@
 #include <string.h>
 #include <stdio.h>
 
+
+// FREETYPE
+#include "../data/deps/Freetype/include/ft2build.h"
+#include FT_FREETYPE_H
+
 #define global_variable static
 #define local_persist static
 #define internal static

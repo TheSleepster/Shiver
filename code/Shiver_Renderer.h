@@ -7,11 +7,11 @@
 #include "util/MemoryArena.h"
 #include "util/Math.h"
 
-// DEFINES
 #include "Shiver_Globals.h"
-
 #include "../data/deps/OpenGL/GLL.h"
 
+
+// COLORS
 global_variable const vec4 COLOR_WHITE = {1.0f, 1.0f, 1.0f, 1.0f};
 global_variable const vec4 COLOR_RED = {1.0f, 0.0f, 0.0f, 1.0f};
 global_variable const vec4 COLOR_GREEN = {0.0f, 1.0f, 0.0f, 1.0f};

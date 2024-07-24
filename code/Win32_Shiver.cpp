@@ -431,11 +431,25 @@ WinMain(HINSTANCE hInstance,
 #endif
                 MSG Message = {0};
                 Win32ProcessWindowMessages(Message, WindowHandle, &WindowData, &State);
+               
+                // NOTE(Sleepster): Updating Window Dimensions here, WMSize is stupid 
+                {
+                    RECT Rect  = {};
+                    GetClientRect(WindowHandle, &Rect);
+                    WindowData.SizeData.Width = Rect.right - Rect.left;
+                    WindowData.SizeData.Height = Rect.top + Rect.bottom;
+                }
                 
-                RECT Rect  = {};
-                GetClientRect(WindowHandle, &Rect);
-                WindowData.SizeData.Width = Rect.right - Rect.left;
-                WindowData.SizeData.Height = Rect.top + Rect.bottom;
+                // NOTE(Sleepster): Mouse Position Data 
+                {
+                    POINT MouseData;
+                    GetCursorPos(&MouseData);
+                    ScreenToClient(WindowHandle, &MouseData);
+
+                    State.GameInput.Keyboard.LastMouse = State.GameInput.Keyboard.CurrentMouse;
+                    State.GameInput.Keyboard.CurrentMouse = ivec2{MouseData.x, MouseData.y};
+                    State.GameInput.Keyboard.MouseDiff = State.GameInput.Keyboard.CurrentMouse - State.GameInput.Keyboard.LastMouse;
+                }
                 
                 time Time = {};
                 
@@ -457,10 +471,8 @@ WinMain(HINSTANCE hInstance,
                 }
                 Time.Alpha = Accumulator / Time.DeltaTime;
                 
-                // NOTE(Sleepster): RNG SEED
-
                 // UPDATE GAME (Framerate Independant)
-                Game.UnlockedUpdate(&State, &RenderData, Time, &GameMemory);
+                Game.UnlockedUpdate(&State, &RenderData, &WindowData, Time, &GameMemory);
                 
                 // TODO(Sleepster): Defer the rendering to a seperate thread so that way we are able to activate VSYNC without breaking everything
                 sh_glRender(&WindowData, WindowHandle, &RenderData, &GameMemory.TransientStorage);

@@ -107,7 +107,7 @@ struct KeyboardInput
 {
     ivec2 LastMouse;
     ivec2 CurrentMouse;
-    ivec2 RelMouse;
+    ivec2 MouseDiff;
     
     Key Keys[KEY_COUNT];
     Keymapping Bindings[BINDING_COUNT];

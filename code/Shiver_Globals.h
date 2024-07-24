@@ -2,8 +2,8 @@
 
 #ifndef _SHIVER__GLOBALS_H
 #define _SHIVER__GLOBALS_H
-#include "Intrinsics.h"
 #include "Shiver_Renderer.h"
+#include "Intrinsics.h"
 
 
 // PLATFORM GLOBLALS

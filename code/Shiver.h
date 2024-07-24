@@ -3,9 +3,9 @@
 #ifndef _SHIVER_H
 #define _SHIVER_H
 
+#include "Shiver_Renderer.h"
 #include "Intrinsics.h"
 #include "Shiver_Input.h"
-#include "Shiver_Renderer.h"
 #include "Shiver_AudioEngine.h"
 #include "Shiver_Globals.h"
 #include "util/Math.h"
@@ -154,7 +154,7 @@ sh_glDrawStaticSprite2D(entity_archetype Arch, vec2 Position, glrenderdata *Rend
 internal inline uint64 
 GetRandom()
 {
-    local_persist uint64 rng_state = 1;
+    uint64 rng_state = 1;
     uint64_t x = rng_state;
     x ^= x << 13;
     x ^= x >> 7;
@@ -174,7 +174,7 @@ GetRandomReal32_Range(real32 Minimum, real32 Maximum)
     return((Maximum - Minimum)*GetRandomReal32() + Minimum);
 }
 
-#define GAME_UPDATE_AND_RENDER(name) void name(gamestate *State, glrenderdata *RenderData, time Time, game_memory *Memory)
+#define GAME_UPDATE_AND_RENDER(name) void name(gamestate *State, glrenderdata *RenderData, win32windowdata *WindowData, time Time, game_memory *Memory)
 typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
 GAME_UPDATE_AND_RENDER(GameUpdateAndRenderStub)
 {
