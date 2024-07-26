@@ -137,7 +137,7 @@ ReadEntireFileMA(const char *Filepath, uint32 *FileSize, MemoryArena *ArenaAlloc
     int32 FileSize2 = GetFileSizeInBytes(Filepath);
     Assert(FileSize2 >= 0, "FileSize is less than 0!\n");
     
-    char *Buffer = ArenaAlloc(ArenaAllocator, size_t(FileSize2 + 1));
+    char *Buffer = (char *)ArenaAlloc(ArenaAllocator, uint64(FileSize2 + 1));
     File = ReadEntireFile(Filepath, FileSize, Buffer);
     
     return(File);
@@ -341,11 +341,14 @@ WinMain(HINSTANCE hInstance,
             
             // MEMORY STUFF
             game_memory GameMemory = {};
-            GameMemory.TransientStorage = MakeMemoryArena(Megabytes(3));
-            GameMemory.PermanentStorage = MakeMemoryArena(Megabytes(3));
+            GameMemory.TransientStorage = MakeMemoryArena(Megabytes(20));
+            GameMemory.PermanentStorage = MakeMemoryArena(Megabytes(30));
             // MEMORY STUFF
             
             AudioSubsystem = (shiver_audio_engine *)ArenaAlloc(&GameMemory.PermanentStorage, sizeof(struct shiver_audio_engine));
+            State.World.Entities = (entity *)ArenaAlloc(&GameMemory.PermanentStorage, sizeof(struct entity) * MAX_ENTITIES);
+            RenderData.RendererTransforms = (renderertransform *)ArenaAlloc(&GameMemory.TransientStorage, sizeof(struct renderertransform) * MAX_TRANSFORMS);
+            RenderData.UITransforms = (renderertransform *)ArenaAlloc(&GameMemory.TransientStorage, sizeof(struct renderertransform) * MAX_UI_TRANSFORMS);
             
             const int32 PixelAttributes[] =
             {
@@ -479,8 +482,8 @@ WinMain(HINSTANCE hInstance,
                 SwapBuffers(WindowDC);
 
                 RenderData.TransformCounter = 0;
-                GameMemory.TransientStorage.Used = 0;
-                GameMemory.TransientStorage.Memory = {};
+                RenderData.UITransformCounter = 0;
+                ArenaReset(&GameMemory.TransientStorage);
                 
                 // UPDATE DELTA TIME
                 LARGE_INTEGER EndCounter;

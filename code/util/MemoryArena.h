@@ -1,6 +1,8 @@
 #pragma once
 #include "../Intrinsics.h"
 
+#include <Windows.h>
+
 // NOTE(Sleepster): Still have no idea if this freelist Idea actually works
 struct FreeList 
 {
@@ -50,6 +52,11 @@ ArenaAlloc(MemoryArena *MemoryArena, uint64 Size)
         Result = MemoryArena->Memory + MemoryArena->Used;
         MemoryArena->Used += AllignedSize;
     }
+    else 
+    {
+        printf("Allocation would exceed Arena Capacity!\n");
+        dAssert(false);
+    }
     return(Result);
 }
 
@@ -73,5 +80,4 @@ internal inline void
 ArenaDestroy(MemoryArena *MemoryArena) 
 {
     free(MemoryArena);
-    MemoryArena = nullptr;
 }

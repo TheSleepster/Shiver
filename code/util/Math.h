@@ -15,7 +15,7 @@ typedef int64_t int64;
 #define RadToDeg(Radians) ((Radians) * (180.0 / PI))
 
 #define Min(A, B) ((A < B) ? (A) : (B))
-#define Max(A, B) ((A > B)) ? (A) : (B))
+#define Max(A, B) ((A > B) ? (A) : (B))
 
 // FLOAT VECTOR 2
 struct vec2
@@ -1089,6 +1089,13 @@ operator/(vec4 A, real32 B)
     
     return(Result);
 }
+
+internal inline bool 
+operator==(vec4 A, vec4 B)
+{
+    return(A.x == B.x && A.y == B.y && A.z == B.z && A.w == B.w);
+}
+
 
 // VECTOR4 FUNCTIONS
 internal inline vec4

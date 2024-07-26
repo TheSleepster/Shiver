@@ -19,7 +19,9 @@ global_variable const int32 MAX_SOUNDS = 128;
 
 
 // SIMULATION GLOBALS
-global_variable const int32 MAX_TRANSFORMS = 10000;
+global_variable const int32 MAX_TRANSFORMS = 100000;
+global_variable const int32 MAX_UI_TRANSFORMS = 2000;
+
 global_variable const real32 SIMRATE = ((1.0f/90.0f)*1000);
 global_variable const real32 RENDERRATE = ((1.0f/144.0f)*1000);
 
@@ -39,7 +41,7 @@ global_variable const real32 EPSILON = 0.05f;
 
 global_variable const int32 MAX_COLLIDER_VERTS = 32;
 global_variable const int32 MAX_SIMPLEX_VERTS = 512;
-global_variable const int32 MAX_ENTITIES = 1024;
+global_variable const int32 MAX_ENTITIES = 1024 * 10;
 
 
 #endif //_SHIVER__GLOBALS_H

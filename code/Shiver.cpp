@@ -11,10 +11,36 @@
 // - Fix with less Caveman
 // - Unga bunga
 
-// NOTE(Sleepster): The Simplex is no longer just 3 points since we are now using EPA for the distance and normal calculations
-//                  Won't be a dynamic buffer, if you have more than 128 verts what the shit are you doing? Change this then.
+// NOTE(Sleepster): Random Number Generation stuff
+#define RAND_MAX_64 0xFFFFFFFFFFFFFFFFull
+#define MULTIPLIER 6364136223846793005ull
+#define INCREMENT 1442695040888963407ull 
 
-// TODO(Sleepster): Make it so that instead of checking all 8 directions, we only check 4 (North, South, East, West)
+internal inline uint64 
+GetRandom()
+{
+    // NOTE(Sleepster): Look Ma, the only local_perist(s) in the entire program!
+    local_persist uint64 rng_state = 1;
+    uint64_t x = rng_state;
+    x ^= x << 13;
+    x ^= x >> 7;
+    x ^= x << 17;
+    rng_state = x;
+    return x;}
+
+internal inline real32
+GetRandomReal32()
+{
+    return((real32)GetRandom()/(real32)UINT64_MAX);
+}
+
+internal inline real32
+GetRandomReal32_Range(real32 Minimum, real32 Maximum)
+{
+    return((Maximum - Minimum)*GetRandomReal32() + Minimum);
+}
+// NOTE(Sleepster): Perhaps since Velocity no longer exists, we could instead change it by the inverse of the difference of the New Player Position
+// and the old player position
 internal void
 ResolveSolidCollision(entity *A, gjk_epa_data Data)
 {
@@ -37,6 +63,7 @@ ResolveSolidCollision(entity *A, gjk_epa_data Data)
     {
         A->Position.x += real32(EPSILON + Data.Depth);
     }
+    A->Acceleration = {0.0f, 0.0f};
 }
 
 // NOTE(Sleepster): This function updates both the simplex and the direction vector
@@ -383,9 +410,9 @@ UpdateEntityColliderData(entity *Entity)
 // TODO(Sleepster): Make it so that we are not making a new sprite every frame, only when we need to actually make it
 
 internal inline void
-DrawEntityStaticSprite2D(entity *Entity, glrenderdata *RenderData)
+DrawEntityStaticSprite2D(entity *Entity, vec4 Color, int RenderingOptions, glrenderdata *RenderData)
 {
-    sh_glDrawStaticSprite2D(Entity->Arch, Entity->Position, RenderData);
+    sh_glDrawStaticSprite2D(Entity->Arch, Entity->Position, Color, RenderingOptions, RenderData);
 }
 
 internal void 
@@ -427,7 +454,6 @@ SetupTree(entity *Entity, glrenderdata *RenderData)
     Entity->Flags = IS_ACTIVE|IS_VALID|IS_ACTOR;
 
     Entity->Position = vec2{0, 0};
-    Entity->Position = vec2{WORLD_WIDTH / 2, WORLD_HEIGHT / 2};
     Entity->Speed = 1.0f;
             
     Entity->Vertex[TOP_LEFT]     = {Entity->Position};
@@ -453,7 +479,10 @@ CreateEntity(world *World)
         }
     }
     Assert(Result, "No more entities\n");
+
+    ++World->EntityCounter;
     Result->Flags = IS_VALID;
+
     return(Result);
 }
 
@@ -497,12 +526,12 @@ GAME_ON_AWAKE(GameOnAwake)
     SetupPlayer(en2, RenderData);
 
     for(uint32 Index = 0;
-        Index < 200;
+        Index < 100;
         ++Index)
     {
         entity *en = CreateEntity(&State->World);
         SetupRock(en, RenderData);
-        en->Position = vec2{GetRandomReal32_Range(-WORLD_WIDTH, WORLD_WIDTH), GetRandomReal32_Range(-WORLD_HEIGHT, WORLD_HEIGHT)};
+        en->Position = vec2{GetRandomReal32_Range(-WORLD_WIDTH * 4, WORLD_WIDTH * 4), GetRandomReal32_Range(-WORLD_HEIGHT * 4, WORLD_HEIGHT * 4)};
     }
 
     sh_glSetClearColor(RenderData, COLOR_TEAL);
@@ -522,14 +551,14 @@ GAME_FIXED_UPDATE(GameFixedUpdate)
 {
     // NOTE(Sleepster): For some reason a "for" loop being present within this fixedupdate causes the game to break
     for(uint32 EntityIndex = 0;
-        EntityIndex < MAX_ENTITIES;
+        EntityIndex < State->World.EntityCounter;
         ++EntityIndex)
     {
         entity *Temp = &State->World.Entities[EntityIndex];
         if((Temp->Flags & IS_VALID) && (Temp->Arch == PLAYER))
         {
             UpdatePlayerPosition(Temp, State, Time);
-            v2Approach(&RenderData->GameCamera.Position, Temp->Position, 1.0f, Time.DeltaTime);
+            v2Approach(&RenderData->GameCamera.Position, Temp->Position, 0.005f, Time.DeltaTime);
         }
     }
 }
@@ -537,17 +566,20 @@ GAME_FIXED_UPDATE(GameFixedUpdate)
 extern "C"
 GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
 {
+    DrawUIText(STR("Test!"), {-100.0f, 0.0f}, 1, COLOR_BLACK, 0, RenderData);
+
     MouseToWorldSpace(&State->GameInput, WindowData, RenderData);
 
     for(uint32 EntityIndex = 0;
-        EntityIndex < MAX_ENTITIES;
+        EntityIndex < State->World.EntityCounter;
         ++EntityIndex)
     {
         entity *Temp = &State->World.Entities[EntityIndex];
         if(Temp->Flags & IS_VALID)
         {
-            DrawEntityStaticSprite2D(Temp, RenderData);
+            DrawEntityStaticSprite2D(Temp, COLOR_WHITE, 0, RenderData);
             UpdateEntityColliderData(Temp);
+            RenderData->GameCamera.Viewport = {WORLD_WIDTH, WORLD_HEIGHT};
         }
     }
 }

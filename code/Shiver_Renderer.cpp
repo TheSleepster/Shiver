@@ -1,4 +1,5 @@
 #include "../data/shader/Shiver_SharedShaderHeader.h"
+#include "Intrinsics.h"
 #include "Shiver_Globals.h"
 #include "util/MemoryArena.h"
 #include "util/Math.h"
@@ -20,6 +21,121 @@
 
 // GAME HEADERS
 #include "Win32_Shiver.h"
+
+// FONT RENDERING
+#define MAX_FONT_SIZE 512
+#define BITMAP_ATLAS_SIZE 512
+
+internal void
+sh_glLoadFont(char *Filepath, int32 Size, glrenderdata *RenderData, MemoryArena *Scratch)
+{
+    fontdata Font = {};
+    Font.FontSize = Size;
+    FT_Error Error;
+
+    Error = FT_Init_FreeType(&Font.FontLib);
+    if(Error)
+    {
+        print_m("Failure to Initialize the font lib!: %d", Error);
+        dAssert(false);
+    }
+
+    Error = FT_New_Face(Font.FontLib, Filepath, 0, &Font.FontFace);
+    if(Error == FT_Err_Unknown_File_Format)
+    {
+        print_m("The font file could be opened, but it's file format is not supported!: %d\n", Error);
+        dAssert(false);
+    }
+    else if(Error)
+    {
+        print_m("Failed to load the font file!: %d\n", Error);
+        dAssert(false);
+    }
+
+    Error = FT_Set_Pixel_Sizes(Font.FontFace, 0, Font.FontSize);
+    if(Error)
+    {
+        print_m("Issue setting the pixel Size of the font!: %d\n", Error);
+        dAssert(false);
+    }
+
+    Font.AtlasPadding = 2;
+    int32 Row = 0;
+    int32 Column = Font.AtlasPadding;
+    
+    char *TextureBuffer = ArenaAlloc(Scratch, (uint64)(sizeof(char) * (BITMAP_ATLAS_SIZE * BITMAP_ATLAS_SIZE)));
+    
+    // FONT LOADING
+    for(unsigned char GlyphIndex = 32; 
+        GlyphIndex < 127;
+        ++GlyphIndex)
+    {
+        FT_UInt Glyph = FT_Load_Char(Font.FontFace, GlyphIndex, FT_LOAD_RENDER); 
+        if(Error)
+        {
+            print_m("Failed to render the glyph!: %d\n", Error);
+            dAssert(false);
+        }
+
+        if(Column + Font.FontFace->glyph->bitmap.width + Font.AtlasPadding >= BITMAP_ATLAS_SIZE)
+        {
+            Column = Font.AtlasPadding;
+            Row += Font.FontSize;
+        }
+
+        RenderData->FontHeight = Max((Font.FontFace->size->metrics.ascender - Font.FontFace->size->metrics.descender) >> 6, 
+                               RenderData->FontHeight);
+        for(uint32 YIndex = 0;
+            YIndex < Font.FontFace->glyph->bitmap.rows;
+            ++YIndex)
+        {
+            for(uint32 XIndex = 0;
+                XIndex < Font.FontFace->glyph->bitmap.width;
+                ++XIndex)
+            {
+                TextureBuffer[(Row + YIndex) * BITMAP_ATLAS_SIZE + Column + XIndex] = 
+                    Font.FontFace->glyph->bitmap.buffer[YIndex * Font.FontFace->glyph->bitmap.width + XIndex];
+            }
+        }
+
+        glyph *FontGlyph = &RenderData->Glyphs[GlyphIndex];
+        FontGlyph->uv = {Column, Row};
+        FontGlyph->GlyphSize = 
+        {
+            (int32)Font.FontFace->glyph->bitmap.width, 
+            (int32)Font.FontFace->glyph->bitmap.rows
+        };
+        FontGlyph->Advance = 
+        {
+            real32(Font.FontFace->glyph->advance.x >> 6), 
+            real32(Font.FontFace->glyph->advance.y >> 6)
+        };
+        FontGlyph->Offset = 
+        {
+            real32(Font.FontFace->glyph->bitmap_left),
+            real32(Font.FontFace->glyph->bitmap_top)
+        };
+
+        Column += Font.FontFace->glyph->bitmap.width + Font.AtlasPadding;
+    }
+
+    FT_Done_Face(Font.FontFace);
+    FT_Done_FreeType(Font.FontLib);
+
+    // OPENGL TEXTURE
+    {
+        glGenTextures(1, (GLuint *)&RenderData->LM_FontAtlasID);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, RenderData->LM_FontAtlasID);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, BITMAP_ATLAS_SIZE, BITMAP_ATLAS_SIZE, 0, GL_RED, GL_UNSIGNED_BYTE, (char *)TextureBuffer);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    }
+}
 
 internal void
 Win32InitializeOpenGLFunctionPointers(WNDCLASS Window, HINSTANCE hInstance, 
@@ -142,7 +258,7 @@ sh_glCreateAndLoadTexture(const char *Filepath, texture2d TextureInfo)
 }
 
 internal void
-sh_glLoadExistingTexture(const char *Filepath, texture2d TextureInfo)
+sh_glReloadExistingTexture(const char *Filepath, texture2d TextureInfo)
 {
     glActiveTexture(TextureInfo.ActiveTexture);
     TextureInfo.RawData = 
@@ -160,14 +276,13 @@ sh_glLoadExistingTexture(const char *Filepath, texture2d TextureInfo)
 
 
 internal glshaderprogram
-sh_glCreateShader(int32 ShaderType, char *Filepath)
+sh_glCreateShader(int32 ShaderType, char *Filepath, MemoryArena *Scratch)
 {
     uint32 FileSize = 0;
     glshaderprogram ReturnShader = {};
-    MemoryArena Scratch = MakeMemoryArena(Kilobytes(200));
     
-    char *ShaderHeader = ReadEntireFileMA("shader/Shiver_SharedShaderHeader.h", &FileSize, &Scratch);
-    char *ShaderSource = ReadEntireFileMA(Filepath, &FileSize, &Scratch);
+    char *ShaderHeader = ReadEntireFileMA("shader/Shiver_SharedShaderHeader.h", &FileSize, Scratch);
+    char *ShaderSource = ReadEntireFileMA(Filepath, &FileSize, Scratch);
     
     ReturnShader.Filepath = Filepath;
     ReturnShader.LastWriteTime = Win32GetLastWriteTime(Filepath); 
@@ -233,16 +348,15 @@ InitializeOpenGLRendererData(glrenderdata *RenderData, MemoryArena *TransientSto
         RenderData->Shaders[BASIC].FragmentShader.Filepath = "shader/Basic_frag.glsl";
         
         RenderData->Shaders[BASIC].VertexShader = 
-            sh_glCreateShader(GL_VERTEX_SHADER, RenderData->Shaders[BASIC].VertexShader.Filepath);
+            sh_glCreateShader(GL_VERTEX_SHADER, RenderData->Shaders[BASIC].VertexShader.Filepath, TransientStorage);
         
         RenderData->Shaders[BASIC].FragmentShader = 
-            sh_glCreateShader(GL_FRAGMENT_SHADER, RenderData->Shaders[BASIC].FragmentShader.Filepath);
+            sh_glCreateShader(GL_FRAGMENT_SHADER, RenderData->Shaders[BASIC].FragmentShader.Filepath, TransientStorage);
         
         RenderData->Shaders[BASIC] = 
             sh_glCreateProgram(RenderData->Shaders[BASIC].VertexShader, RenderData->Shaders[BASIC].FragmentShader);
     }
     
-
     RenderData->ScreenSizeID = 
         glGetUniformLocation(RenderData->Shaders[BASIC].Shader, "ScreenSize");
     RenderData->OrthographicMatrixID = 
@@ -262,6 +376,9 @@ InitializeOpenGLRendererData(glrenderdata *RenderData, MemoryArena *TransientSto
     sh_glCreateAndLoadTexture(RenderData->Textures[TEXTURE_GAME_ATLAS].Filepath, RenderData->Textures[TEXTURE_GAME_ATLAS]);
     
     RenderData->Textures[TEXTURE_GAME_ATLAS].LastWriteTime = Win32GetLastWriteTime(RenderData->Textures[TEXTURE_GAME_ATLAS].Filepath);
+
+    // NOTE(Sleepster): Font Atlas
+    sh_glLoadFont("res/fonts/LiberationMono-Regular.ttf", 64, RenderData, TransientStorage);
     
     RenderData->Shaders[BASIC].VertexShader.LastWriteTime = 
         Win32GetLastWriteTime(RenderData->Shaders[BASIC].VertexShader.Filepath);
@@ -271,14 +388,16 @@ InitializeOpenGLRendererData(glrenderdata *RenderData, MemoryArena *TransientSto
     
     RenderData->GameCamera.Position = {0.0f, 0.0f};
     RenderData->GameCamera.Viewport = {WORLD_WIDTH, WORLD_HEIGHT};
-    
+
+    RenderData->UICamera.Position = {0.0f, 0.0f};
+    RenderData->UICamera.Viewport = {WORLD_WIDTH, WORLD_HEIGHT};
+
     glEnable(GL_FRAMEBUFFER_SRGB);
     glDisable(0x809D); // Disabling multisampling
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_GREATER);
 
     sh_glSetClearColor(RenderData, COLOR_TEAL);
-    
     glUseProgram(RenderData->Shaders[BASIC].Shader);
 }
 
@@ -294,7 +413,7 @@ sh_glRender(win32windowdata *WindowData, HWND WindowHandle, glrenderdata *Render
     
     if(CompareFileTime(&NewTextureWriteTime, &RenderData->Textures[TEXTURE_GAME_ATLAS].LastWriteTime) != 0)
     {
-        sh_glLoadExistingTexture(RenderData->Textures[TEXTURE_GAME_ATLAS].Filepath, RenderData->Textures[TEXTURE_GAME_ATLAS]);
+        sh_glReloadExistingTexture(RenderData->Textures[TEXTURE_GAME_ATLAS].Filepath, RenderData->Textures[TEXTURE_GAME_ATLAS]);
         RenderData->Textures[TEXTURE_GAME_ATLAS].LastWriteTime = NewTextureWriteTime;
         Sleep(100);
     }
@@ -303,40 +422,58 @@ sh_glRender(win32windowdata *WindowData, HWND WindowHandle, glrenderdata *Render
        CompareFileTime(&NewFragmentShaderWriteTime, &RenderData->Shaders[BASIC].FragmentShader.LastWriteTime) != 0)
     {
         RenderData->Shaders[BASIC].VertexShader = 
-            sh_glCreateShader(GL_VERTEX_SHADER, RenderData->Shaders[BASIC].VertexShader.Filepath);
+            sh_glCreateShader(GL_VERTEX_SHADER, RenderData->Shaders[BASIC].VertexShader.Filepath, Memory);
         
         RenderData->Shaders[BASIC].FragmentShader = 
-            sh_glCreateShader(GL_FRAGMENT_SHADER, RenderData->Shaders[BASIC].FragmentShader.Filepath);
+            sh_glCreateShader(GL_FRAGMENT_SHADER, RenderData->Shaders[BASIC].FragmentShader.Filepath, Memory);
         
+        glDeleteProgram(RenderData->Shaders[BASIC].Shader);
+
         RenderData->Shaders[BASIC] = 
             sh_glCreateProgram(RenderData->Shaders[BASIC].VertexShader, RenderData->Shaders[BASIC].FragmentShader);
-        
+
         glUseProgram(RenderData->Shaders[BASIC].Shader);
         Sleep(100);
     }
 #endif
-    ///////////////////////
-    // NOTE(Sleepster): Actual renderering
     glClearColor(RenderData->ClearColor.r, RenderData->ClearColor.g, RenderData->ClearColor.b, RenderData->ClearColor.a);
     glClearDepth(0.0f);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     glViewport(0, 0, WindowData->SizeData.Width, WindowData->SizeData.Height);
     
-    vec4 CameraInfo = 
+    // NOTE(Sleepster): Game Rendering Pass
     {
-        RenderData->GameCamera.Position.x - RenderData->GameCamera.Viewport.x / 2, 
-        RenderData->GameCamera.Position.x + RenderData->GameCamera.Viewport.x / 2, 
-        RenderData->GameCamera.Position.y - RenderData->GameCamera.Viewport.y / 2, 
-        RenderData->GameCamera.Position.y + RenderData->GameCamera.Viewport.y / 2
-    };
-    
-    RenderData->GameCamera.Matrix = CreateOrthographicMatrix(CameraInfo);
-    glUniformMatrix4fv(RenderData->OrthographicMatrixID, 1, GL_FALSE, (const GLfloat *)&RenderData->GameCamera.Matrix.Elements[0][0]);
-    
-    vec2 ScreenSize = vec2{(real32)WindowData->SizeData.Width, (real32)WindowData->SizeData.Height};
-    glUniform2fv(RenderData->ScreenSizeID, 1, &ScreenSize.x);
-    
-    glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(renderertransform) * RenderData->TransformCounter, RenderData->RendererTransforms);
+        vec4 CameraInfo = 
+        {
+            RenderData->GameCamera.Position.x - RenderData->GameCamera.Viewport.x / 2, 
+            RenderData->GameCamera.Position.x + RenderData->GameCamera.Viewport.x / 2, 
+            RenderData->GameCamera.Position.y - RenderData->GameCamera.Viewport.y / 2, 
+            RenderData->GameCamera.Position.y + RenderData->GameCamera.Viewport.y / 2
+        };
 
-    glDrawArraysInstanced(GL_TRIANGLES, 0, 6, RenderData->TransformCounter);
+        RenderData->GameCamera.Matrix = CreateOrthographicMatrix(CameraInfo);
+        glUniformMatrix4fv(RenderData->OrthographicMatrixID, 1, GL_FALSE, (const GLfloat *)&RenderData->GameCamera.Matrix.Elements[0][0]);
+
+        vec2 ScreenSize = vec2{(real32)WindowData->SizeData.Width, (real32)WindowData->SizeData.Height};
+        glUniform2fv(RenderData->ScreenSizeID, 1, &ScreenSize.x);
+        glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(renderertransform) * RenderData->TransformCounter, RenderData->RendererTransforms);
+
+        glDrawArraysInstanced(GL_TRIANGLES, 0, 6, RenderData->TransformCounter);
+    }
+
+    // NOTE(Sleepster): UI and text rendering Pass
+    {
+        vec4 CameraInfo = 
+        {
+            RenderData->UICamera.Position.x - RenderData->UICamera.Viewport.x / 2, 
+            RenderData->UICamera.Position.x + RenderData->UICamera.Viewport.x / 2, 
+            RenderData->UICamera.Position.y - RenderData->UICamera.Viewport.y / 2, 
+            RenderData->UICamera.Position.y + RenderData->UICamera.Viewport.y / 2
+        };
+
+        RenderData->UICamera.Matrix = CreateOrthographicMatrix(CameraInfo);
+        glUniformMatrix4fv(RenderData->OrthographicMatrixID, 1, GL_FALSE, (const GLfloat *)&RenderData->UICamera.Matrix.Elements[0][0]);
+        glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(renderertransform) * RenderData->UITransformCounter, RenderData->UITransforms);
+        glDrawArraysInstanced(GL_TRIANGLES, 0, 6, RenderData->UITransformCounter);
+    }
 }

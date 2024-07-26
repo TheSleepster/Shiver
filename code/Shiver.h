@@ -55,6 +55,8 @@ struct entity
     
     vec2 Vertex[MAX_COLLIDER_VERTS];
     int32 VertexCount;
+
+    vec4 Color;
 };
 
 struct simplex
@@ -100,7 +102,8 @@ struct game_memory
 
 struct world 
 {
-    entity Entities[MAX_ENTITIES]; 
+    entity *Entities; 
+    uint32 EntityCounter;
 };
 
 struct gamestate
@@ -111,8 +114,6 @@ struct gamestate
     world World;
 };
 
-///////////////////////////////////////////////////
-// NOTE(Sleepster): Game Sprite Getter
 internal inline static_sprite_data
 sh_glGetSprite(entity_archetype Arch, glrenderdata *RenderData)
 {
@@ -131,9 +132,22 @@ sh_glLoadSpriteSheet(glrenderdata *RenderData)
     RenderData->StaticSprites[TREE00] = {{32, 0}, {7, 15}};
 }
 
-// NOTE(Sleepster): The rotation is in Degrees
+internal vec4
+sh_glConvertToLinearColor(vec4 Color)
+{
+    vec4 Result = {};
+
+    Result.r = powf(Color.r, 2.2f);
+    Result.g = powf(Color.g, 2.2f);
+    Result.b = powf(Color.b, 2.2f);
+    Result.a = powf(Color.a, 2.2f);
+
+    return(Result);
+}
+
 internal void
-sh_glDrawStaticSprite2D(entity_archetype Arch, vec2 Position, glrenderdata *RenderData)
+sh_glDrawStaticSprite2D(entity_archetype Arch, vec2 Position, vec4 Color, 
+                        int RenderingOptions, glrenderdata *RenderData)
 {
     static_sprite_data SpriteData = sh_glGetSprite(Arch, RenderData);
     
@@ -142,38 +156,51 @@ sh_glDrawStaticSprite2D(entity_archetype Arch, vec2 Position, glrenderdata *Rend
     Transform.SpriteSize = SpriteData.SpriteSize;
     Transform.Size = v2Cast(RenderData->StaticSprites[Arch].SpriteSize);
     Transform.WorldPosition = Position - (Transform.Size / 2);
+    Transform.MaterialColor = sh_glConvertToLinearColor(Color);
+    Transform.RenderingOptions = RenderingOptions;
     
     RenderData->RendererTransforms[RenderData->TransformCounter++] = Transform;
 }
 
-// NOTE(Sleepster): Random Number Generation stuff
-#define RAND_MAX_64 0xFFFFFFFFFFFFFFFFull
-#define MULTIPLIER 6364136223846793005ull
-#define INCREMENT 1442695040888963407ull 
 
-internal inline uint64 
-GetRandom()
+internal void 
+sh_glSetClearColor(glrenderdata *RenderData, vec4 Color)
 {
-    // NOTE(Sleepster): Look Ma, the only local_perist(s) in the entire program!
-    local_persist uint64 rng_state = 1;
-    uint64_t x = rng_state;
-    x ^= x << 13;
-    x ^= x >> 7;
-    x ^= x << 17;
-    rng_state = x;
-    return x;}
-
-internal inline real32
-GetRandomReal32()
-{
-    return((real32)GetRandom()/(real32)UINT64_MAX);
+    RenderData->ClearColor = Color;
 }
 
-internal inline real32
-GetRandomReal32_Range(real32 Minimum, real32 Maximum)
+internal void 
+DrawUIText(string Text, vec2 Position, uint32 Size, 
+           vec4 Color, uint32 LayerMask, glrenderdata *RenderData)
 {
-    return((Maximum - Minimum)*GetRandomReal32() + Minimum);
+    vec2 TextOrigin = Position;
+    while(char C = *(Text.Data++))
+    {
+        if(C == '\n')
+        {
+            Position.y += RenderData->FontHeight * Size;
+            Position.x = TextOrigin.x;
+            continue;
+        }
+
+        glyph Glyph = RenderData->Glyphs[C];
+        renderertransform Transform = {};
+        
+        Transform.MaterialColor = Color;
+        Transform.WorldPosition = {(Position.x + Glyph.Offset.x) * Size, (Position.y - Glyph.Offset.y) * Size};
+        Transform.AtlasOffset = Glyph.uv;
+        Transform.SpriteSize = Glyph.GlyphSize;
+        Transform.Size = v2Cast(Glyph.GlyphSize) * (real32)Size;
+        Transform.RenderingOptions = RENDERING_OPTION_FONT;
+        Transform.LayerMask = LayerMask;
+
+        RenderData->UITransforms[RenderData->UITransformCounter++] = Transform;
+        Position.x += Glyph.Advance.x * Size;
+    }
 }
+
+///////////////////////////////////////////////////
+// NOTE(Sleepster): Game Sprite Getter
 
 #define GAME_UPDATE_AND_RENDER(name) void name(gamestate *State, glrenderdata *RenderData, win32windowdata *WindowData, time Time, game_memory *Memory)
 typedef GAME_UPDATE_AND_RENDER(game_update_and_render);

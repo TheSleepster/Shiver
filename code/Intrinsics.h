@@ -32,7 +32,6 @@
 #include <string.h>
 #include <stdio.h>
 
-
 // FREETYPE
 #include "../data/deps/Freetype/include/ft2build.h"
 #include FT_FREETYPE_H
@@ -57,6 +56,8 @@ typedef int32 bool32;
 typedef float real32;
 typedef double real64;
 
+#include "util/sh_Strings.h"
+
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -68,12 +69,5 @@ typedef double real64;
 #define ENGINE 1
 #define SHIVER_SLOW 1
 #define FMOD 0
-
-// NOTE(Sleepster): Length Based Strings
-struct string
-{
-    uint8 *Data;
-    uint64 Length;
-};
 
 #endif //_INTRINSICS_H

@@ -3,20 +3,21 @@
 #ifndef _SHIVER__RENDERER_H
 #define _SHIVER__RENDERER_H
 
-#include "../data/shader/Shiver_SharedShaderHeader.h"
-#include "util/MemoryArena.h"
 #include "util/Math.h"
-
-#include "Shiver_Globals.h"
-#include "../data/deps/OpenGL/GLL.h"
-
 
 // COLORS
 global_variable const vec4 COLOR_WHITE = {1.0f, 1.0f, 1.0f, 1.0f};
+global_variable const vec4 COLOR_BLACK = {0.0f, 0.0f, 0.0f, 1.0f};
 global_variable const vec4 COLOR_RED = {1.0f, 0.0f, 0.0f, 1.0f};
 global_variable const vec4 COLOR_GREEN = {0.0f, 1.0f, 0.0f, 1.0f};
 global_variable const vec4 COLOR_BLUE = {0.0f, 0.0f, 1.0f, 1.0f};
 global_variable const vec4 COLOR_TEAL = {0.1f, 0.6f, 1.0f, 1.0f};
+
+#include "../data/shader/Shiver_SharedShaderHeader.h"
+#include "util/MemoryArena.h"
+
+#include "Shiver_Globals.h"
+#include "../data/deps/OpenGL/GLL.h"
 
 
 enum ShaderPrograms
@@ -30,6 +31,7 @@ enum GlRendererTextures
 {
     NULL_TEXTURE,
     TEXTURE_GAME_ATLAS,
+    
     TEXTURE_COUNT
 };
 
@@ -40,14 +42,14 @@ struct win32windowdata
 
 struct texture2d
 {
+    FILETIME LastWriteTime;
+
     ivec3 TextureData;
-    GLenum ActiveTexture;
     char *RawData;
     char *Filepath;
     
     GLuint TextureID;
-    
-    FILETIME LastWriteTime;
+    GLenum ActiveTexture;
 };
 
 struct glshaderprogram
@@ -79,19 +81,48 @@ struct orthocamera2d
     real32 Zoom;
 };
 
+struct glyph
+{
+    vec2 Offset;
+    vec2 Advance;
+    ivec2 GlyphSize;
+    ivec2 uv;
+};
+
+struct fontdata
+{
+    FT_Library FontLib;
+    FT_Face FontFace;
+    int32 FontSize;
+    int32 AtlasPadding;
+};
+
+struct interfacetext
+{
+    material Color;
+    real32 FontSize;
+};
+
 struct glrenderdata
 {
     uint32 TransformCounter;
-    renderertransform RendererTransforms[MAX_TRANSFORMS];
+    renderertransform *RendererTransforms;
+
+    uint32 UITransformCounter;
+    renderertransform *UITransforms;
     
     GLuint RendererTransformsSBOID;
     GLuint ScreenSizeID;
     GLuint OrthographicMatrixID;
+
+    GLuint LM_FontAtlasID;
+    int32 FontHeight;
+    glyph Glyphs[128];
     
     shader Shaders[1];
     
     static_sprite_data StaticSprites[20];
-    texture2d Textures[31];
+    texture2d Textures[2];
 
     orthocamera2d GameCamera;
     orthocamera2d UICamera;
@@ -99,10 +130,25 @@ struct glrenderdata
     vec4 ClearColor;
 };
 
-internal void 
-sh_glSetClearColor(glrenderdata *RenderData, vec4 Color)
+internal vec4 
+HexToRGBA(int64 hex) 
 {
-    RenderData->ClearColor = Color;
+    vec4 Result = {};
+
+    uint8 R = (hex>>24) & 0x000000FF;
+    uint8 G = (hex>>16) & 0x000000FF;
+    uint8 B = (hex>>8) & 0x000000FF;
+    uint8 A = (hex>>0) & 0x000000FF;
+
+    Result = 
+    {
+        (real32)R / 255.0f,
+        (real32)G / 255.0f,
+        (real32)B / 255.0f,
+        (real32)A / 255.0f,
+    };
+
+    return(Result);
 }
 
 ///////////////////////////////////////////////////
@@ -111,7 +157,7 @@ internal mat4
 CreateOrthographicMatrix(vec4 Data)
 {
     mat4 Result = {};
-    
+   
     Result.Elements[3][0] = -(Data.Right + Data.Left) / (Data.Right - Data.Left);
     Result.Elements[3][1] = -(Data.Top + Data.Bottom) / (Data.Top - Data.Bottom);
     Result.Elements[3][2] =  0.0f;
@@ -140,4 +186,11 @@ RotateZ(real32 Angle)
     
     return(Result);
 }
+
+internal inline bool
+operator==(material A, material B)
+{
+    return(A.Color == B.Color);
+}
+
 #endif //_SHIVER__RENDERER_H
