@@ -496,8 +496,8 @@ WinMain(HINSTANCE hInstance,
                 Accumulator += MSPerFrame;
                 LastCounter = EndCounter;
                 
-                print_m("%.02fms\n", MSPerFrame);
-                print_m("FPS: %d\n", FPS);
+                printm("%.02fms\n", MSPerFrame);
+                printm("FPS: %d\n", FPS);
             }
         }
         else

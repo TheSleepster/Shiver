@@ -33,20 +33,20 @@ sh_InitializeFMODStudioSubsystem(fmod_sound_subsystem_data *FMODSubsystemData)
     Result = FMOD_Studio_System_Create(&FMODSubsystemData->StudioSystem, FMOD_VERSION);
     if(Result != FMOD_OK)
     {
-        print_m("Error: %d\n", Result);
+        printm("Error: %d\n", Result);
         Assert(false, "Failed to create the FMOD studio system!\n");
     }
     // NOTE(Sleepster): We only need to gather the core system if we want to assign changes to it
     Result = FMOD_Studio_System_GetCoreSystem(FMODSubsystemData->StudioSystem, &FMODSubsystemData->CoreSystem);
     if(Result != FMOD_OK)
     {
-        print_m("Error: %d\n", Result);
+        printm("Error: %d\n", Result);
         Assert(false, "Failed to get FMOD Studio's core system!\n");
     }
     Result = FMOD_System_SetSoftwareFormat(FMODSubsystemData->CoreSystem, 48000, FMOD_SPEAKERMODE_STEREO, 0);
     if(Result != FMOD_OK)
     {
-        print_m("Error: %d\n", Result);
+        printm("Error: %d\n", Result);
         Assert(false, "Failed to Set the FMOD System software format!\n");
     }
     
@@ -54,7 +54,7 @@ sh_InitializeFMODStudioSubsystem(fmod_sound_subsystem_data *FMODSubsystemData)
     Result = FMOD_Studio_System_Initialize(FMODSubsystemData->StudioSystem, 512, FMOD_STUDIO_INIT_NORMAL, FMOD_INIT_NORMAL, 0);
     if(Result != FMOD_OK)
     {
-        print_m("Error: %d\n", Result);
+        printm("Error: %d\n", Result);
         Assert(false, "Failed to Intialize the FMOD studio system!\n");
     }
 }
@@ -73,7 +73,7 @@ sh_LoadFMODStudioBankData(fmod_sound_subsystem_data *FMODSubsystemData,
                                              FMOD_STUDIO_LOAD_BANK_NORMAL, &FMODSubsystemData->MasterBank);
     if(Result != FMOD_OK)
     {
-        print_m("Error: %d\n", Result);
+        printm("Error: %d\n", Result);
         Assert(false, "Failed to Load the main bank file!\n");
     }
     
@@ -81,7 +81,7 @@ sh_LoadFMODStudioBankData(fmod_sound_subsystem_data *FMODSubsystemData,
                                              FMOD_STUDIO_LOAD_BANK_NORMAL, &FMODSubsystemData->MasterStringsBank);
     if(Result != FMOD_OK)
     {
-        print_m("Error: %d\n", Result);
+        printm("Error: %d\n", Result);
         Assert(false, "Failed to Load the strings bank file!\n");
     }
     
@@ -153,7 +153,7 @@ sh_InitAudioEngine(shiver_audio_engine *sh_AudioEngine)
     Result = ma_context_init(NULL, 0, NULL, &sh_AudioEngine->sh_AudioContext);
     if(Result != MA_SUCCESS)
     {
-        print_m("Failed to Initialize the sh_AudioEngine's Context!, Code: %d\n", Result)
+        printm("Failed to Initialize the sh_AudioEngine's Context!, Code: %d\n", Result)
             Assert(false, "Failed to Initialize the sh_AudioEngine's Context!\n");
     }
     
@@ -161,7 +161,7 @@ sh_InitAudioEngine(shiver_audio_engine *sh_AudioEngine)
                               &PlaybackInfo, &PlaybackCount,
                               &CaptureInfo, &CaptureCount) != MA_SUCCESS)
     {
-        print_m("Failed to Gather the Input/Output Devices!, Code: %d\n", Result);
+        printm("Failed to Gather the Input/Output Devices!, Code: %d\n", Result);
         Assert(false, "Failed to Gather the Input/Output Devices!\n");
     }
     
@@ -169,7 +169,7 @@ sh_InitAudioEngine(shiver_audio_engine *sh_AudioEngine)
         DeviceIndex < PlaybackCount;
         ++DeviceIndex)
     {
-        print_m("%d - %s\n", DeviceIndex, PlaybackInfo[DeviceIndex].name);
+        printm("%d - %s\n", DeviceIndex, PlaybackInfo[DeviceIndex].name);
     }
     
     sh_AudioEngine->sh_AudioDeviceConfig = ma_device_config_init(ma_device_type_playback);
@@ -184,7 +184,7 @@ sh_InitAudioEngine(shiver_audio_engine *sh_AudioEngine)
                             &sh_AudioEngine->sh_AudioOutputDevice);
     if(Result != MA_SUCCESS)
     {
-        print_m("Failure to initialize the device!, Code: %d\n", Result);
+        printm("Failure to initialize the device!, Code: %d\n", Result);
         Assert(false, "Failure\n");
     }
     
@@ -196,7 +196,7 @@ sh_InitAudioEngine(shiver_audio_engine *sh_AudioEngine)
     Result = ma_resource_manager_init(&sh_AudioEngine->sh_AudioManagerConfig, &sh_AudioEngine->sh_AudioManager);
     if(Result != MA_SUCCESS)
     {
-        print_m("Failure to initialize the Resource Manager!, Code: %d\n", Result);
+        printm("Failure to initialize the Resource Manager!, Code: %d\n", Result);
         Assert(false, "Failure\n");
     }
     
@@ -213,7 +213,7 @@ sh_InitAudioEngine(shiver_audio_engine *sh_AudioEngine)
                                                       &sh_AudioEngine->sh_AudioLoadedSounds[1]);
         if(Result != MA_SUCCESS)
         {
-            print_m("Failure to initialize the Sound!, Index: %d, Code: %d\n", sh_AudioEngine->CurrentSoundIndex, Result);
+            printm("Failure to initialize the Sound!, Index: %d, Code: %d\n", sh_AudioEngine->CurrentSoundIndex, Result);
             Assert(false, "Failure\n");
         }
         // TODO(Sleepster): Add a struct that will define exactly what it is that a soundfx has. Such as whether it is looping.
@@ -225,7 +225,7 @@ sh_InitAudioEngine(shiver_audio_engine *sh_AudioEngine)
     Result = ma_device_start(&sh_AudioEngine->sh_AudioOutputDevice);
     if(Result != MA_SUCCESS)
     {
-        print_m("Failure to start the device!, Code: %d\n", Result);
+        printm("Failure to start the device!, Code: %d\n", Result);
         Assert(false, "Failure\n");
     }
     return(1);
@@ -241,7 +241,7 @@ sh_InitializeAudioEngine(shiver_audio_engine *AudioEngine)
     Result = ma_context_init(0, 0, 0, &AudioEngine->AudioContext);
     if(Result != MA_SUCCESS)
     {
-        print_m("Failure to initialize the context!, Code: %d\n", Result);
+        printm("Failure to initialize the context!, Code: %d\n", Result);
         Assert(false, "Failure\n");
     }
     
@@ -254,7 +254,7 @@ sh_InitializeAudioEngine(shiver_audio_engine *AudioEngine)
     Result = ma_device_init(&AudioEngine->AudioContext, &AudioEngine->OutputDeviceConfig, &AudioEngine->OutputDevice);
     if(Result != MA_SUCCESS)
     {
-        print_m("Failure to initialize the device!, Code: %d\n", Result);
+        printm("Failure to initialize the device!, Code: %d\n", Result);
         Assert(false, "Failure\n");
     }
     
@@ -266,7 +266,7 @@ sh_InitializeAudioEngine(shiver_audio_engine *AudioEngine)
     Result = ma_engine_init(&AudioEngine->EngineConfig, &AudioEngine->Engine);
     if(Result != MA_SUCCESS)
     {
-        print_m("Failure to initialize the engine!, Code: %d\n", Result);
+        printm("Failure to initialize the engine!, Code: %d\n", Result);
         Assert(false, "Failure\n");
     }
     

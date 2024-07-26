@@ -24,7 +24,7 @@
 
 // FONT RENDERING
 #define MAX_FONT_SIZE 512
-#define BITMAP_ATLAS_SIZE 512
+#define BITMAP_ATLAS_SIZE 1024
 
 internal void
 sh_glLoadFont(char *Filepath, int32 Size, glrenderdata *RenderData, MemoryArena *Scratch)
@@ -36,26 +36,26 @@ sh_glLoadFont(char *Filepath, int32 Size, glrenderdata *RenderData, MemoryArena 
     Error = FT_Init_FreeType(&Font.FontLib);
     if(Error)
     {
-        print_m("Failure to Initialize the font lib!: %d", Error);
+        printm("Failure to Initialize the font lib!: %d", Error);
         dAssert(false);
     }
 
     Error = FT_New_Face(Font.FontLib, Filepath, 0, &Font.FontFace);
     if(Error == FT_Err_Unknown_File_Format)
     {
-        print_m("The font file could be opened, but it's file format is not supported!: %d\n", Error);
+        printm("The font file could be opened, but it's file format is not supported!: %d\n", Error);
         dAssert(false);
     }
     else if(Error)
     {
-        print_m("Failed to load the font file!: %d\n", Error);
+        printm("Failed to load the font file!: %d\n", Error);
         dAssert(false);
     }
 
     Error = FT_Set_Pixel_Sizes(Font.FontFace, 0, Font.FontSize);
     if(Error)
     {
-        print_m("Issue setting the pixel Size of the font!: %d\n", Error);
+        printm("Issue setting the pixel Size of the font!: %d\n", Error);
         dAssert(false);
     }
 
@@ -66,14 +66,14 @@ sh_glLoadFont(char *Filepath, int32 Size, glrenderdata *RenderData, MemoryArena 
     char *TextureBuffer = ArenaAlloc(Scratch, (uint64)(sizeof(char) * (BITMAP_ATLAS_SIZE * BITMAP_ATLAS_SIZE)));
     
     // FONT LOADING
-    for(unsigned char GlyphIndex = 32; 
+    for(uint8 GlyphIndex = 32; 
         GlyphIndex < 127;
         ++GlyphIndex)
     {
         FT_UInt Glyph = FT_Load_Char(Font.FontFace, GlyphIndex, FT_LOAD_RENDER); 
         if(Error)
         {
-            print_m("Failed to render the glyph!: %d\n", Error);
+            printm("Failed to render the glyph!: %d\n", Error);
             dAssert(false);
         }
 
@@ -132,8 +132,8 @@ sh_glLoadFont(char *Filepath, int32 Size, glrenderdata *RenderData, MemoryArena 
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     }
 }
 
@@ -199,12 +199,12 @@ OpenGLDebugMessageCallback(GLenum Source, GLenum Type, GLuint ID, GLenum Severit
        Severity == GL_DEBUG_SEVERITY_MEDIUM||
        Severity == GL_DEBUG_SEVERITY_HIGH)
     {
-        print_m("Error: %s\n", Message);
+        printm("Error: %s\n", Message);
         Assert(false, "STOPPING\n");
     }
     else
     {
-        print_m("Warning: %s\n", Message);
+        printm("Warning: %s\n", Message);
     }
 }
 
@@ -229,7 +229,7 @@ sh_glVerifyivSuccess(GLuint TestID, GLuint Type)
     if(!Success)
     {
         glGetShaderInfoLog(TestID, 512, 0, ShaderLog);
-        print_m("ERROR ON SHADER: %s\n", ShaderLog);
+        printm("ERROR ON SHADER: %s\n", ShaderLog);
         Assert(false, "STOPPING\n");
     }
 }
@@ -378,7 +378,7 @@ InitializeOpenGLRendererData(glrenderdata *RenderData, MemoryArena *TransientSto
     RenderData->Textures[TEXTURE_GAME_ATLAS].LastWriteTime = Win32GetLastWriteTime(RenderData->Textures[TEXTURE_GAME_ATLAS].Filepath);
 
     // NOTE(Sleepster): Font Atlas
-    sh_glLoadFont("res/fonts/LiberationMono-Regular.ttf", 64, RenderData, TransientStorage);
+    sh_glLoadFont("res/fonts/LiberationMono-Regular.ttf", 96, RenderData, TransientStorage);
     
     RenderData->Shaders[BASIC].VertexShader.LastWriteTime = 
         Win32GetLastWriteTime(RenderData->Shaders[BASIC].VertexShader.Filepath);

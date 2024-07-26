@@ -9,15 +9,15 @@
 #define Check(Expression, Message) if(!(Expression)) {OutputDebugStringA(Message);}
 #define dAssert(Expression) if(!(Expression)) {DebugBreak();}
 #define Trace(Message) {OutputDebugStringA(Message);}
-#define print_m(Message, ...) {char BUFFER[256] = {}; sprintf(BUFFER, Message, __VA_ARGS__); OutputDebugStringA(BUFFER);}
+#define printm(Message, ...) {char BUFFER[256] = {}; sprintf(BUFFER, Message, __VA_ARGS__); OutputDebugStringA(BUFFER);}
 
 #else
 
 #define Assert(Expression, Message)
 #define Check(Expression, Message)
 #define dAssert(Expression)
-#define print_m(Message, Printing)
 #define Trace(Message)
+#define printm(Message, ...)
 
 #endif
 
@@ -55,6 +55,9 @@ typedef int32 bool32;
 
 typedef float real32;
 typedef double real64;
+
+#define FIRST_ARG(arg1, ...) arg1
+#define SECOND_ARG(arg1, arg2, ...) arg2
 
 #include "util/sh_Strings.h"
 

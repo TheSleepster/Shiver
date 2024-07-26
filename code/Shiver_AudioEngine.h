@@ -176,7 +176,7 @@ sh_PlayBackgroundTrack(music_tracks Track)
         Result = ma_sound_start(&AudioSubsystem->BackgroundTracks[Track]);
         if(Result != MA_SUCCESS)
         {
-            print_m("Failure to start the sound!, Code: %d\n", Result);
+            printm("Failure to start the sound!, Code: %d\n", Result);
             Assert(false, "Failure\n");
         }
     }

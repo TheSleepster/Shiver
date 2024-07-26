@@ -74,4 +74,196 @@ ConcatinatePair(const string Left, const string Right, MemoryArena *Scratch)
     return(Result);
 }
 
+internal inline string
+CStringToString(const char *CString)
+{
+    string Result = {};
+    Result.Data = (uint8 *)CString;
+    Result.Length = strlen(CString);
+
+    return(Result);
+}
+
+internal inline char *
+StringToCString(MemoryArena *Memory, const string String)
+{
+    char *CString = ArenaAlloc(Memory, sizeof(String.Data + 1));
+    memcpy(CString, String.Data, String.Length);
+    CString[String.Length] = 0;
+
+    return(CString);
+}
+
+internal uint64
+FormatStringToBuffer(char *Buffer, uint64 Count, const char* fmt, va_list args)
+{
+    if(!Buffer) (Count = UINT64_MAX);
+
+    const char *temp = fmt;
+    char *Bufferp = Buffer;
+
+    while(*temp != '\0' && uint64((Bufferp - Buffer)) < Count - 1)
+    {
+        if(*temp == '%')
+        {
+            temp += 1;
+            if(*temp == 's')
+            {
+                // NOTE(Sleepster): %s in formatting 
+                temp += 1;
+                string S = va_arg(args, string);
+                Assert(S.Length < (1024ULL * 1024ULL * 1024ULL * 256ULL), "This is not a fixed length 'string' to %%s. Check if it is a 'char*', if it is use %%cs instead");
+                for(uint64 Index = 0;
+                    Index < S.Length;
+                    ++Index)
+                {
+                    if(Buffer) *Bufferp = S.Data[Index];
+                    ++Bufferp;
+                }
+            }
+            else if(*temp == 'c' && *(temp + 1) == 's')
+            {
+                // NOTE(Sleepster): Allows for support of formatting CStrings
+                temp += 2;
+                char *s = va_arg(args, char *);
+                uint64 Length = 0;
+                
+                while(*s != '\0' && uint64(Bufferp - Buffer) < Count - 1)
+                {
+                    Assert(Length < (1024ULL * 1024ULL * 1024ULL * 256ULL), "Brother you passed something that isn't a CString, missing null terminator\n");
+                    if(Buffer)
+                    {
+                        *Bufferp = *s;
+                    }
+                    ++s;
+                    ++Bufferp;
+                    ++Length;
+                    Assert(Length < (1024ULL * 1024ULL * 1024ULL * 256ULL), "Brother you passed something that isn't a CString, missing null terminator\n");
+                }
+            }
+            else
+            {
+                // NOTE(Sleepster): Standard vsnprintf 
+
+                char TempFallback[512] = {};
+                char FormatSpecifier[64] = {};
+                int32 SpecifierLength = 0;
+
+                FormatSpecifier[SpecifierLength++] = '%';
+                while(*temp != '\0' && strchr("diuoxXfFeEgGaAcCpn%", *temp) == NULL)
+                {
+                    FormatSpecifier[SpecifierLength++] = *temp++;
+                }
+                if(*temp != '\0')
+                {
+                    FormatSpecifier[SpecifierLength++] = *temp++;
+                }
+                FormatSpecifier[SpecifierLength] = '\0';
+
+                int32 TempLength = vsnprintf(TempFallback, sizeof(TempFallback), FormatSpecifier, args);
+                switch (FormatSpecifier[SpecifierLength - 1]) 
+                {
+                    case 'd': case 'i': va_arg(args, int); break;
+                    case 'u': case 'x': case 'X': case 'o': va_arg(args, unsigned int); break;
+                    case 'f': case 'F': case 'e': case 'E': case 'g': case 'G': case 'a': case 'A': va_arg(args, double); break;
+                    case 'c': va_arg(args, int); break;
+                    case 's': va_arg(args, char*); break;
+                    case 'p': va_arg(args, void*); break;
+                    case 'n': va_arg(args, int*); break;
+                    default: break;
+                }
+
+                if(TempLength < 0)
+                {
+                    return 0; // Error;
+                }
+
+                for(int32 Index = 0;
+                    Index < TempLength && uint64(Bufferp - Buffer) < Count - 1;
+                    ++Index)
+                {
+                    if(Buffer) *Bufferp = TempFallback[Index];
+                    ++Bufferp;
+                }
+            }
+        }
+        else 
+        {
+            if(Buffer) 
+            {
+                *Bufferp = *temp;
+            }
+            ++Bufferp;
+            ++temp;
+        }
+    }
+    if(Buffer) *Bufferp = '\0';
+
+    return(Bufferp - Buffer);
+}
+
+internal inline string
+SprintCStringArgsToBuffer(const char *fmt, va_list args, void *Buffer, uint64 BufferSize)
+{
+    uint64 FormatLength = FormatStringToBuffer((char *)Buffer, BufferSize, fmt, args);
+    
+    string Result = {};
+    Result.Data = (uint8 *)Buffer;
+
+    if(FormatLength >= 0 && FormatLength < BufferSize)
+    {
+        Result.Length = FormatLength;
+    }
+    else
+    {
+        Result.Length = BufferSize - 1;
+    }
+
+    return(Result);
+}
+
+internal string
+SprintVAList(MemoryArena *Memory, const string fmt, va_list args)
+{
+    char *fmt_cstring = StringToCString(Memory, fmt);
+    uint64 Count = FormatStringToBuffer(NULL, 0, fmt_cstring, args) + 1;
+
+    char* Buffer = {};
+    Buffer = ArenaAlloc(Memory, Count);
+
+    return(SprintCStringArgsToBuffer(fmt_cstring, args, Buffer, Count));
+}
+
+// NOTE(Sleepster): This ends up formatting similar to that of printf
+internal string
+sprints(MemoryArena *Memory, const string Text, ...)
+{
+    string sfmt = {};
+    sfmt.Data = Text.Data;
+    sfmt.Length = Text.Length;
+
+    va_list args;
+    va_start(args, Text);
+    string S = SprintVAList(Memory, sfmt, args);
+    va_end(args);
+
+    return(S);
+}
+
+// NOTE(Sleepster): This is literally the same thing, but will instead just straight up take a char *
+internal string
+sprintd(MemoryArena *Memory, const char *Text, ...)
+{
+    string sfmt = {};
+    sfmt.Data = (uint8 *)Text;
+    sfmt.Length = strlen(Text);
+
+    va_list args;
+    va_start(args, Text);
+    string S = SprintVAList(Memory, sfmt, args);
+    va_end(args);
+
+    return(S);
+}
+
 #endif // _SH_STRINGS_H

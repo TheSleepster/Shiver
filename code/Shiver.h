@@ -169,8 +169,9 @@ sh_glSetClearColor(glrenderdata *RenderData, vec4 Color)
     RenderData->ClearColor = Color;
 }
 
+// TODO(Sleepster): Proper font scaling
 internal void 
-DrawUIText(string Text, vec2 Position, uint32 Size, 
+DrawUIText(string Text, vec2 Position, real32 Scale, 
            vec4 Color, uint32 LayerMask, glrenderdata *RenderData)
 {
     vec2 TextOrigin = Position;
@@ -178,7 +179,7 @@ DrawUIText(string Text, vec2 Position, uint32 Size,
     {
         if(C == '\n')
         {
-            Position.y += RenderData->FontHeight * Size;
+            Position.y += RenderData->FontHeight * Scale;
             Position.x = TextOrigin.x;
             continue;
         }
@@ -187,15 +188,15 @@ DrawUIText(string Text, vec2 Position, uint32 Size,
         renderertransform Transform = {};
         
         Transform.MaterialColor = Color;
-        Transform.WorldPosition = {(Position.x + Glyph.Offset.x) * Size, (Position.y - Glyph.Offset.y) * Size};
+        Transform.WorldPosition = {(Position.x + Glyph.Offset.x) * Scale, (Position.y - Glyph.Offset.y) * (Scale)};
         Transform.AtlasOffset = Glyph.uv;
         Transform.SpriteSize = Glyph.GlyphSize;
-        Transform.Size = v2Cast(Glyph.GlyphSize) * (real32)Size;
+        Transform.Size = v2Cast(Glyph.GlyphSize) * (real32)Scale;
         Transform.RenderingOptions = RENDERING_OPTION_FONT;
         Transform.LayerMask = LayerMask;
 
         RenderData->UITransforms[RenderData->UITransformCounter++] = Transform;
-        Position.x += Glyph.Advance.x * Size;
+        Position.x += Glyph.Advance.x;
     }
 }
 

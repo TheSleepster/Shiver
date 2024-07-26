@@ -559,6 +559,7 @@ GAME_FIXED_UPDATE(GameFixedUpdate)
         {
             UpdatePlayerPosition(Temp, State, Time);
             v2Approach(&RenderData->GameCamera.Position, Temp->Position, 0.005f, Time.DeltaTime);
+            v2Approach(&RenderData->UICamera.Position, Temp->Position, 0.005f, Time.DeltaTime);
         }
     }
 }
@@ -566,7 +567,7 @@ GAME_FIXED_UPDATE(GameFixedUpdate)
 extern "C"
 GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
 {
-    DrawUIText(STR("Test!"), {-100.0f, 0.0f}, 1, COLOR_BLACK, 0, RenderData);
+    DrawUIText(sprints(&Memory->TransientStorage, STR("%d, %f"), 10, 0.8f), {-100.0f, 0.0f}, 0.05f, COLOR_BLACK, 0, RenderData);
 
     MouseToWorldSpace(&State->GameInput, WindowData, RenderData);
 
