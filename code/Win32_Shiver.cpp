@@ -349,6 +349,7 @@ WinMain(HINSTANCE hInstance,
             State.World.Entities = (entity *)ArenaAlloc(&GameMemory.PermanentStorage, sizeof(struct entity) * MAX_ENTITIES);
             RenderData.RendererTransforms = (renderertransform *)ArenaAlloc(&GameMemory.TransientStorage, sizeof(struct renderertransform) * MAX_TRANSFORMS);
             RenderData.UITransforms = (renderertransform *)ArenaAlloc(&GameMemory.TransientStorage, sizeof(struct renderertransform) * MAX_UI_TRANSFORMS);
+            RenderData.GameTextTransforms = (renderertransform *)ArenaAlloc(&GameMemory.TransientStorage, sizeof(struct renderertransform) * MAX_TEXT_TRANSFORMS);
             
             const int32 PixelAttributes[] =
             {
@@ -483,6 +484,7 @@ WinMain(HINSTANCE hInstance,
 
                 RenderData.TransformCounter = 0;
                 RenderData.UITransformCounter = 0;
+                RenderData.GameTextTransformCounter = 0;
                 ArenaReset(&GameMemory.TransientStorage);
                 
                 // UPDATE DELTA TIME

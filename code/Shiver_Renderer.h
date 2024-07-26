@@ -110,6 +110,9 @@ struct glrenderdata
 
     uint32 UITransformCounter;
     renderertransform *UITransforms;
+
+    uint32 GameTextTransformCounter;
+    renderertransform *GameTextTransforms;
     
     GLuint RendererTransformsSBOID;
     GLuint ScreenSizeID;

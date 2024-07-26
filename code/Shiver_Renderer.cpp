@@ -461,7 +461,15 @@ sh_glRender(win32windowdata *WindowData, HWND WindowHandle, glrenderdata *Render
         glDrawArraysInstanced(GL_TRIANGLES, 0, 6, RenderData->TransformCounter);
     }
 
-    // NOTE(Sleepster): UI and text rendering Pass
+    // NOTE(Sleepster): Game Text rendering Pass
+    {
+        glUniformMatrix4fv(RenderData->OrthographicMatrixID, 1, GL_FALSE, (const GLfloat *)&RenderData->GameCamera.Matrix.Elements[0][0]);
+        glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(renderertransform) * RenderData->GameTextTransformCounter, RenderData->GameTextTransforms);
+
+        glDrawArraysInstanced(GL_TRIANGLES, 0, 6, RenderData->UITransformCounter);
+    }
+
+    // NOTE(Sleepster): UI rendering Pass
     {
         vec4 CameraInfo = 
         {

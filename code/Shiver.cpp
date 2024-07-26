@@ -524,6 +524,7 @@ GAME_ON_AWAKE(GameOnAwake)
 
     entity *en2 = CreateEntity(&State->World);
     SetupPlayer(en2, RenderData);
+    en2->Position = {11.1f, 11.1f};
 
     for(uint32 Index = 0;
         Index < 100;
@@ -559,7 +560,6 @@ GAME_FIXED_UPDATE(GameFixedUpdate)
         {
             UpdatePlayerPosition(Temp, State, Time);
             v2Approach(&RenderData->GameCamera.Position, Temp->Position, 0.005f, Time.DeltaTime);
-            v2Approach(&RenderData->UICamera.Position, Temp->Position, 0.005f, Time.DeltaTime);
         }
     }
 }
@@ -567,9 +567,9 @@ GAME_FIXED_UPDATE(GameFixedUpdate)
 extern "C"
 GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
 {
-    DrawUIText(sprints(&Memory->TransientStorage, STR("%d, %f"), 10, 0.8f), {-100.0f, 0.0f}, 0.05f, COLOR_BLACK, 0, RenderData);
-
     MouseToWorldSpace(&State->GameInput, WindowData, RenderData);
+    DrawUIText(sprints(&Memory->TransientStorage, STR("%f, %f"), State->World.Entities[0].Position.x, State->World.Entities[0].Position.y), {0.0f, 0.0f}, 0.05f, COLOR_BLACK, 0, RenderData);
+    DrawInWorldText(sprints(&Memory->TransientStorage, STR("%f, %f"), State->World.Entities[0].Position.x, State->World.Entities[0].Position.y), {0.0f, 0.0f}, 0.05f, COLOR_BLACK, 0, RenderData);
 
     for(uint32 EntityIndex = 0;
         EntityIndex < State->World.EntityCounter;

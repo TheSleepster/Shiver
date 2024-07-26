@@ -200,6 +200,37 @@ DrawUIText(string Text, vec2 Position, real32 Scale,
     }
 }
 
+internal void 
+DrawInWorldText(string Text, vec2 Position, real32 Scale, 
+           vec4 Color, uint32 LayerMask, glrenderdata *RenderData)
+{
+    vec2 TextOrigin = Position;
+    
+    while(char C = *(Text.Data++))
+    {
+        if(C == '\n')
+        {
+            Position.y += RenderData->FontHeight * Scale;
+            Position.x = TextOrigin.x;
+            continue;
+        }
+
+        glyph Glyph = RenderData->Glyphs[C];
+        renderertransform Transform = {};
+        
+        Transform.MaterialColor = Color;
+        Transform.WorldPosition = {(Position.x + Glyph.Offset.x) * Scale, (Position.y - Glyph.Offset.y) * (Scale)};
+        Transform.AtlasOffset = Glyph.uv;
+        Transform.SpriteSize = Glyph.GlyphSize;
+        Transform.Size = v2Cast(Glyph.GlyphSize) * (real32)Scale;
+        Transform.RenderingOptions = RENDERING_OPTION_FONT;
+        Transform.LayerMask = LayerMask;
+
+        RenderData->GameTextTransforms[RenderData->GameTextTransformCounter++] = Transform;
+        Position.x += Glyph.Advance.x;
+    }
+}
+
 ///////////////////////////////////////////////////
 // NOTE(Sleepster): Game Sprite Getter
 

@@ -21,6 +21,7 @@ global_variable const int32 MAX_SOUNDS = 128;
 // SIMULATION GLOBALS
 global_variable const int32 MAX_TRANSFORMS = 100000;
 global_variable const int32 MAX_UI_TRANSFORMS = 2000;
+global_variable const int32 MAX_TEXT_TRANSFORMS = 5000;
 
 global_variable const real32 SIMRATE = ((1.0f/90.0f)*1000);
 global_variable const real32 RENDERRATE = ((1.0f/144.0f)*1000);
