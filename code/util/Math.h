@@ -20,8 +20,19 @@ typedef int64_t int64;
 // FLOAT VECTOR 2
 struct vec2
 {
-    real32 x;
-    real32 y;
+    union 
+    {
+        struct 
+        {
+            real32 x;
+            real32 y;
+        };
+        struct 
+        {
+            real32 width;
+            real32 height;
+        };
+    };
 };
 
 // OPERATOR OVERLOADING
@@ -459,8 +470,20 @@ v2InvDeterminate(mat2 A)
 
 struct ivec2
 {
-    int x;
-    int y;
+    union
+    {
+        struct 
+        {
+            int32 x;
+            int32 y;
+        };
+        struct 
+        {
+            int32 width;
+            int32 height;
+        };
+    
+    };
 };
 
 // OPERATOR OVERLOADING
@@ -804,6 +827,17 @@ v3Dot(vec3 A, vec3 B)
     return((A.x * B.x) + (A.y * B.y) + (A.z * B.z));
 }
 
+internal inline vec3
+v2Expand(vec2 A, real32 Z)
+{
+    vec3 Result = {};
+    Result.x = A.x;
+    Result.y = A.y;
+    Result.z = Z;
+
+    return(Result);
+}
+
 union mat3
 {
     real32 Elements[3][3];
@@ -977,6 +1011,16 @@ union vec4
         };
         real32 w;
     };
+
+    union 
+    {
+        vec2 xy;
+        struct 
+        {
+            real32 x, y;
+        };
+        real32 z, w;
+    };
     
     struct
     {
@@ -1109,11 +1153,26 @@ v4Create(vec3 A, real32 W)
     return(Result);
 }
 
+internal inline vec4
+v2Expand(vec2 A, real32 Z, real32 W)
+{
+    vec4 Result = {};
+    
+    Result.x = A.x;
+    Result.y = A.y;
+    Result.z = Z;
+    Result.w = W;
+
+    return(Result);
+}
+
+
 // 4x4 FLOAT MATRIX
 
 union mat4
 {
     real32 Elements[4][4];
+    real32 Index[16];
     vec4 Columns[4];
 };
 
@@ -1157,30 +1216,15 @@ mat4Determinant(mat4 A)
 }
 
 internal inline vec4
-mat4Transform(vec4 A, mat4 B)
+mat4Transform(mat4 B, vec4 A)
 {
     vec4 Result = {};
-    
-    Result.x = A.Elements[0] * B.Columns[0].x;
-    Result.y = A.Elements[0] * B.Columns[0].y;
-    Result.z = A.Elements[0] * B.Columns[0].z;
-    Result.w = A.Elements[0] * B.Columns[0].w;
-    
-    Result.x += A.Elements[1] * B.Columns[1].x;
-    Result.y += A.Elements[1] * B.Columns[1].y;
-    Result.z += A.Elements[1] * B.Columns[1].z;
-    Result.w += A.Elements[1] * B.Columns[1].w;
-    
-    Result.x += A.Elements[2] * B.Columns[2].x;
-    Result.y += A.Elements[2] * B.Columns[2].y;
-    Result.z += A.Elements[2] * B.Columns[2].z;
-    Result.w += A.Elements[2] * B.Columns[2].w;
-    
-    Result.x += A.Elements[3] * B.Columns[3].x;
-    Result.y += A.Elements[3] * B.Columns[3].y;
-    Result.z += A.Elements[3] * B.Columns[3].z;
-    Result.w += A.Elements[3] * B.Columns[3].w;
-    
+
+    Result.x = B.Elements[0][0] * A.x + B.Elements[0][1] * A.y + B.Elements[0][2] * A.z + B.Elements[0][3] * A.w;
+    Result.y = B.Elements[1][0] * A.x + B.Elements[1][1] * A.y + B.Elements[1][2] * A.z + B.Elements[1][3] * A.w;
+    Result.z = B.Elements[2][0] * A.x + B.Elements[2][1] * A.y + B.Elements[2][2] * A.z + B.Elements[2][3] * A.w;
+    Result.w = B.Elements[3][0] * A.x + B.Elements[3][1] * A.y + B.Elements[3][2] * A.z + B.Elements[3][3] * A.w;
+
     return(Result);
 }
 
@@ -1265,24 +1309,89 @@ mat4ScalerMult(mat4 A, real32 B)
 internal inline mat4
 mat4Multiply(mat4 A, mat4 B)
 {
+    mat4 result;
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            result.Elements[i][j] = A.Elements[0][i] * B.Elements[j][0] +
+                                    A.Elements[1][i] * B.Elements[j][1] +
+                                    A.Elements[2][i] * B.Elements[j][2] +
+                                    A.Elements[3][i] * B.Elements[j][3];
+        }
+    }
+    return result;
+}
+
+internal mat4
+mat4MatrixFromScaler(real32 Scaler)
+{
+    mat4 Result = {}; 
+
+    Result.Elements[0][0] = Scaler;
+    Result.Elements[1][1] = Scaler;
+    Result.Elements[2][2] = Scaler;
+    Result.Elements[3][3] = Scaler; 
+
+    return(Result);
+}
+
+internal inline mat4
+mat4Translate(vec3 Translation)
+{
+    mat4 Result = {};
+
+    // NOTE(Sleepster): Reversed the direction of the tranlation vector. Not doing so would flip the controls 
+    Result.Elements[0][0] = 1.0f; 
+    Result.Elements[1][1] = 1.0f; 
+    Result.Elements[2][2] = 1.0f; 
+    Result.Elements[3][3] = 1.0f;
+    Result.Elements[3][0] = -Translation.x;
+    Result.Elements[3][1] = -Translation.y;
+    Result.Elements[3][2] = -Translation.z;
+
+    return(Result); 
+}
+
+internal inline
+mat4 mat4MakeScale(vec3 Scale) {
+    mat4 m = mat4MatrixFromScaler(1.0);
+    m.Elements[0][0] = Scale.x;
+    m.Elements[1][1] = Scale.y;
+    m.Elements[2][2] = Scale.z;
+    m.Elements[3][3] = 1.0f;
+    return m;
+}
+
+///////////////////////////////////////////////////
+// NOTE(Sleepster): Matrix stuffs
+internal mat4
+CreateOrthographicMatrix(vec4 Data)
+{
+    real32 nearplane = -1.0f;
+    real32 farplane  =  1.0f;
+
     mat4 Result = {};
     
-    Result.Columns[0] = mat4Transform(B.Columns[0], A);
-    Result.Columns[1] = mat4Transform(B.Columns[1], A);
-    Result.Columns[2] = mat4Transform(B.Columns[2], A);
-    Result.Columns[3] = mat4Transform(B.Columns[3], A);
+    Result.Elements[0][0] =  2.0f / (Data.Right - Data.Left);
+    Result.Elements[1][1] =  2.0f / (Data.Top - Data.Bottom);
+    Result.Elements[2][2] =  -2.0f / (farplane - nearplane);
+    Result.Elements[3][3] =  1.0f;
+    Result.Elements[3][0] = -(Data.Right + Data.Left) / (Data.Right - Data.Left);
+    Result.Elements[3][1] = -(Data.Top + Data.Bottom) / (Data.Top - Data.Bottom);
+    Result.Elements[3][2] = -(farplane + nearplane) / (farplane - nearplane);
     
     return(Result);
 }
 
+
+// NOTE(Sleepster): this one is wrong
 internal mat4
-mat4Inverse(mat4 A)
+WRONGmat4Inverse(mat4 A)
 {
     mat4 Result = {};
 
     vec3 C01 = v3Cross(A.Columns[0].xyz, A.Columns[1].xyz);
     vec3 C23 = v3Cross(A.Columns[2].xyz, A.Columns[3].xyz);
-    vec3 B10 =  (A.Columns[0].xyz * A.Columns[1].w) - (A.Columns[1].xyz * A.Columns[0].w);
+    vec3 B10 = (A.Columns[0].xyz * A.Columns[1].w) - (A.Columns[1].xyz * A.Columns[0].w);
     vec3 B32 = (A.Columns[2].xyz * A.Columns[3].w) - (A.Columns[3].xyz * A.Columns[2].w);
 
     real32 InvDeterminant = 1.0f / (v3Dot(C01, B32) + v3Dot(C23, B10));
@@ -1297,6 +1406,161 @@ mat4Inverse(mat4 A)
     Result.Columns[2] = v4Create((v3Cross(A.Columns[3].xyz, B10) + (C01 * A.Columns[3].w)), -(v3Dot(A.Columns[3].xyz, C01)));
     Result.Columns[3] = v4Create((v3Cross(B10, A.Columns[2].xyz) - (C01 * A.Columns[2].w)), +(v3Dot(A.Columns[2].xyz, C01)));
 
+    return(mat4Transpose(Result));
+}
+
+internal mat4
+RotateZ(real32 Angle)
+{
+    mat4 Result = {};
+    
+    Result.Elements[0][0] = (real32)cos(Angle);
+    Result.Elements[1][0] = (real32)-sin(Angle);
+    
+    Result.Elements[0][1] = (real32)sin(Angle);
+    Result.Elements[1][1] = (real32)cos(Angle);
+    
+    Result.Elements[2][2] = 1.0f;
+    Result.Elements[3][3] = 1.0f;
+    
     return(Result);
 }
+
+internal mat4
+mat4Inverse(mat4 A)
+{
+    mat4 Inverse;
+    real32 Det;
+
+    Inverse.Elements[0][0] =  A.Elements[1][1] * A.Elements[2][2] * A.Elements[3][3] -
+                              A.Elements[1][1] * A.Elements[2][3] * A.Elements[3][2] -
+                              A.Elements[2][1] * A.Elements[1][2] * A.Elements[3][3] +
+                              A.Elements[2][1] * A.Elements[1][3] * A.Elements[3][2] +
+                              A.Elements[3][1] * A.Elements[1][2] * A.Elements[2][3] -
+                              A.Elements[3][1] * A.Elements[1][3] * A.Elements[2][2];
+
+    Inverse.Elements[1][0] = -A.Elements[1][0] * A.Elements[2][2] * A.Elements[3][3] +
+                              A.Elements[1][0] * A.Elements[2][3] * A.Elements[3][2] +
+                              A.Elements[2][0] * A.Elements[1][2] * A.Elements[3][3] -
+                              A.Elements[2][0] * A.Elements[1][3] * A.Elements[3][2] -
+                              A.Elements[3][0] * A.Elements[1][2] * A.Elements[2][3] +
+                              A.Elements[3][0] * A.Elements[1][3] * A.Elements[2][2];
+
+    Inverse.Elements[2][0] =  A.Elements[1][0] * A.Elements[2][1] * A.Elements[3][3] -
+                              A.Elements[1][0] * A.Elements[2][3] * A.Elements[3][1] -
+                              A.Elements[2][0] * A.Elements[1][1] * A.Elements[3][3] +
+                              A.Elements[2][0] * A.Elements[1][3] * A.Elements[3][1] +
+                              A.Elements[3][0] * A.Elements[1][1] * A.Elements[2][3] -
+                              A.Elements[3][0] * A.Elements[1][3] * A.Elements[2][1];
+
+    Inverse.Elements[3][0] = -A.Elements[1][0] * A.Elements[2][1] * A.Elements[3][2] +
+                              A.Elements[1][0] * A.Elements[2][2] * A.Elements[3][1] +
+                              A.Elements[2][0] * A.Elements[1][1] * A.Elements[3][2] -
+                              A.Elements[2][0] * A.Elements[1][2] * A.Elements[3][1] -
+                              A.Elements[3][0] * A.Elements[1][1] * A.Elements[2][2] +
+                              A.Elements[3][0] * A.Elements[1][2] * A.Elements[2][1];
+
+    Inverse.Elements[0][1] = -A.Elements[0][1] * A.Elements[2][2] * A.Elements[3][3] +
+                              A.Elements[0][1] * A.Elements[2][3] * A.Elements[3][2] +
+                              A.Elements[2][1] * A.Elements[0][2] * A.Elements[3][3] -
+                              A.Elements[2][1] * A.Elements[0][3] * A.Elements[3][2] -
+                              A.Elements[3][1] * A.Elements[0][2] * A.Elements[2][3] +
+                              A.Elements[3][1] * A.Elements[0][3] * A.Elements[2][2];
+
+    Inverse.Elements[1][1] =  A.Elements[0][0] * A.Elements[2][2] * A.Elements[3][3] -
+                              A.Elements[0][0] * A.Elements[2][3] * A.Elements[3][2] -
+                              A.Elements[2][0] * A.Elements[0][2] * A.Elements[3][3] +
+                              A.Elements[2][0] * A.Elements[0][3] * A.Elements[3][2] +
+                              A.Elements[3][0] * A.Elements[0][2] * A.Elements[2][3] -
+                              A.Elements[3][0] * A.Elements[0][3] * A.Elements[2][2];
+
+    Inverse.Elements[2][1] = -A.Elements[0][0] * A.Elements[2][1] * A.Elements[3][3] +
+                              A.Elements[0][0] * A.Elements[2][3] * A.Elements[3][1] +
+                              A.Elements[2][0] * A.Elements[0][1] * A.Elements[3][3] -
+                              A.Elements[2][0] * A.Elements[0][3] * A.Elements[3][1] -
+                              A.Elements[3][0] * A.Elements[0][1] * A.Elements[2][3] +
+                              A.Elements[3][0] * A.Elements[0][3] * A.Elements[2][1];
+
+    Inverse.Elements[3][1] =  A.Elements[0][0] * A.Elements[2][1] * A.Elements[3][2] -
+                              A.Elements[0][0] * A.Elements[2][2] * A.Elements[3][1] -
+                              A.Elements[2][0] * A.Elements[0][1] * A.Elements[3][2] +
+                              A.Elements[2][0] * A.Elements[0][2] * A.Elements[3][1] +
+                              A.Elements[3][0] * A.Elements[0][1] * A.Elements[2][2] -
+                              A.Elements[3][0] * A.Elements[0][2] * A.Elements[2][1];
+
+    Inverse.Elements[0][2] =  A.Elements[0][1] * A.Elements[1][2] * A.Elements[3][3] -
+                              A.Elements[0][1] * A.Elements[1][3] * A.Elements[3][2] -
+                              A.Elements[1][1] * A.Elements[0][2] * A.Elements[3][3] +
+                              A.Elements[1][1] * A.Elements[0][3] * A.Elements[3][2] +
+                              A.Elements[3][1] * A.Elements[0][2] * A.Elements[1][3] -
+                              A.Elements[3][1] * A.Elements[0][3] * A.Elements[1][2];
+
+    Inverse.Elements[1][2] = -A.Elements[0][0] * A.Elements[1][2] * A.Elements[3][3] +
+                              A.Elements[0][0] * A.Elements[1][3] * A.Elements[3][2] +
+                              A.Elements[1][0] * A.Elements[0][2] * A.Elements[3][3] -
+                              A.Elements[1][0] * A.Elements[0][3] * A.Elements[3][2] -
+                              A.Elements[3][0] * A.Elements[0][2] * A.Elements[1][3] +
+                              A.Elements[3][0] * A.Elements[0][3] * A.Elements[1][2];
+
+    Inverse.Elements[2][2] =  A.Elements[0][0] * A.Elements[1][1] * A.Elements[3][3] -
+                              A.Elements[0][0] * A.Elements[1][3] * A.Elements[3][1] -
+                              A.Elements[1][0] * A.Elements[0][1] * A.Elements[3][3] +
+                              A.Elements[1][0] * A.Elements[0][3] * A.Elements[3][1] +
+                              A.Elements[3][0] * A.Elements[0][1] * A.Elements[1][3] -
+                              A.Elements[3][0] * A.Elements[0][3] * A.Elements[1][1];
+
+    Inverse.Elements[3][2] = -A.Elements[0][0] * A.Elements[1][1] * A.Elements[3][2] +
+                              A.Elements[0][0] * A.Elements[1][2] * A.Elements[3][1] +
+                              A.Elements[1][0] * A.Elements[0][1] * A.Elements[3][2] -
+                              A.Elements[1][0] * A.Elements[0][2] * A.Elements[3][1] -
+                              A.Elements[3][0] * A.Elements[0][1] * A.Elements[1][2] +
+                              A.Elements[3][0] * A.Elements[0][2] * A.Elements[1][1];
+
+    Inverse.Elements[0][3] = -A.Elements[0][1] * A.Elements[1][2] * A.Elements[2][3] +
+                              A.Elements[0][1] * A.Elements[1][3] * A.Elements[2][2] +
+                              A.Elements[1][1] * A.Elements[0][2] * A.Elements[2][3] -
+                              A.Elements[1][1] * A.Elements[0][3] * A.Elements[2][2] -
+                              A.Elements[2][1] * A.Elements[0][2] * A.Elements[1][3] +
+                              A.Elements[2][1] * A.Elements[0][3] * A.Elements[1][2];
+
+    Inverse.Elements[1][3] =  A.Elements[0][0] * A.Elements[1][2] * A.Elements[2][3] -
+                              A.Elements[0][0] * A.Elements[1][3] * A.Elements[2][2] -
+                              A.Elements[1][0] * A.Elements[0][2] * A.Elements[2][3] +
+                              A.Elements[1][0] * A.Elements[0][3] * A.Elements[2][2] +
+                              A.Elements[2][0] * A.Elements[0][2] * A.Elements[1][3] -
+                              A.Elements[2][0] * A.Elements[0][3] * A.Elements[1][2];
+
+    Inverse.Elements[2][3] = -A.Elements[0][0] * A.Elements[1][1] * A.Elements[2][3] +
+                              A.Elements[0][0] * A.Elements[1][3] * A.Elements[2][1] +
+                              A.Elements[1][0] * A.Elements[0][1] * A.Elements[2][3] -
+                              A.Elements[1][0] * A.Elements[0][3] * A.Elements[2][1] -
+                              A.Elements[2][0] * A.Elements[0][1] * A.Elements[1][3] +
+                              A.Elements[2][0] * A.Elements[0][3] * A.Elements[1][1];
+
+    Inverse.Elements[3][3] =  A.Elements[0][0] * A.Elements[1][1] * A.Elements[2][2] -
+                              A.Elements[0][0] * A.Elements[1][2] * A.Elements[2][1] -
+                              A.Elements[1][0] * A.Elements[0][1] * A.Elements[2][2] +
+                              A.Elements[1][0] * A.Elements[0][2] * A.Elements[2][1] +
+                              A.Elements[2][0] * A.Elements[0][1] * A.Elements[1][2] -
+                              A.Elements[2][0] * A.Elements[0][2] * A.Elements[1][1];
+
+    Det = A.Elements[0][0] * Inverse.Elements[0][0] + 
+          A.Elements[0][1] * Inverse.Elements[1][0] + 
+          A.Elements[0][2] * Inverse.Elements[2][0] + 
+          A.Elements[0][3] * Inverse.Elements[3][0];
+
+    if (Det == 0.0f)
+        return mat4MatrixFromScaler(0.0f); 
+
+    Det = 1.0f / Det;
+
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            Inverse.Elements[i][j] *= Det;
+        }
+    }
+
+    return Inverse;
+}
+
 // TODO : Finish all of the 4x4 matrix calcs

@@ -12,8 +12,6 @@ layout(location = 0) out vec4 FragColor;
 
 void main()
 {
-    vec4 TextureColor = texelFetch(TextureAtlas, ivec2(TextureCoordsIn), 0);
-    
     if(bool(RenderingOptions & RENDERING_OPTION_FONT))
     {
         vec4 TextureColor = texelFetch(LM_FontAtlas, ivec2(TextureCoordsIn), 0);

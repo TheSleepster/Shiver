@@ -182,7 +182,6 @@ Win32LoadGameCode(const char *SourceDLLName)
 internal void
 Win32UnloadGameCode(win32gamecode *GameCode)
 {
-    sh_ResetAudioEngine(AudioSubsystem);
     AudioSubsystem->Initialized = false;
     
     if(GameCode->GameCodeDLL)
@@ -204,6 +203,14 @@ Win32MainWindowCallback(HWND WindowHandle, UINT Message,
     
     switch(Message)
     {
+        case WM_SIZE:
+        {
+            RECT Rect = {};
+            GetClientRect(WindowHandle, &Rect);
+            SizeData.width  = int32(Rect.right - Rect.left);
+            SizeData.height = int32(Rect.bottom - Rect.top);
+        }break;
+            
         case WM_CLOSE:
         {
             PostQuitMessage(0);
@@ -228,14 +235,6 @@ Win32ProcessWindowMessages(MSG Message, HWND WindowHandle, win32windowdata *Wind
     {
         switch(Message.message)
         {
-            case WM_SIZE:
-            {
-                RECT Rect  = {};
-                GetClientRect(WindowHandle, &Rect);
-                WindowData->SizeData.Width = Rect.right - Rect.left;
-                WindowData->SizeData.Height = Rect.top - Rect.bottom;
-            }break;
-            
             case WM_SYSKEYDOWN:
             case WM_SYSKEYUP:
             case WM_KEYDOWN:
@@ -318,20 +317,27 @@ WinMain(HINSTANCE hInstance,
     if(RegisterClass(&Window))
     {
         Win32InitializeOpenGLFunctionPointers(Window, hInstance, &WGLFunctions);
+
+        // NOTE(Sleepster): Weird voodoo shit because windows doesn't actually give you a client of the windowsize you ask, it's LITERALLY the WINDOWsize 
+        RECT rect = {0, 0, WindowData.SizeData.Width, WindowData.SizeData.Height};
+        AdjustWindowRectEx(&rect, WS_OVERLAPPEDWINDOW, FALSE, WS_EX_CLIENTEDGE);
+        WindowData.SizeData.Width  = rect.right  - rect.left;
+        WindowData.SizeData.Height = rect.bottom - rect.top;
+
         // ACTUAL WINDOW USED IN THE PROGRAM
-        
         HWND WindowHandle =
-            CreateWindow(Window.lpszClassName,
-                         "Shiver",
-                         WS_OVERLAPPEDWINDOW|WS_VISIBLE,
-                         WindowData.SizeData.x,
-                         WindowData.SizeData.y,
-                         WindowData.SizeData.Width,
-                         WindowData.SizeData.Height,
-                         0,
-                         0,
-                         hInstance,
-                         0);
+            CreateWindowEx(WS_EX_CLIENTEDGE,
+                           Window.lpszClassName,
+                           "Shiver",
+                           WS_OVERLAPPEDWINDOW|WS_VISIBLE|CS_OWNDC,
+                           CW_USEDEFAULT,
+                           CW_USEDEFAULT,
+                           WindowData.SizeData.Width,
+                           WindowData.SizeData.Height,
+                           0,
+                           0,
+                           hInstance,
+                           0);
         if(WindowHandle)
         {
             HDC WindowDC = GetDC(WindowHandle);
@@ -387,6 +393,8 @@ WinMain(HINSTANCE hInstance,
             
             HGLRC MainRenderingContext = WGLFunctions.wglCreateContextAttribsARB(WindowDC, 0, ContextAttributes);
             wglMakeCurrent(WindowDC, MainRenderingContext);
+            LoadOpenGLFunctions();
+    
             
             // NOTE(Sleepster): This will break collision detection and resolution
             // VSYNC
@@ -421,7 +429,8 @@ WinMain(HINSTANCE hInstance,
                     
                     Game = Win32LoadGameCode(SourceDLLName);
                     
-                    sh_InitializeAudioEngine(AudioSubsystem);
+                    // NOTE(Sleepster): Disabled because it breaks hot reloading
+                    //sh_InitializeAudioEngine(AudioSubsystem);
                     AudioSubsystem->Initialized = true;
                     
                     Game.OnAwake(&State, &RenderData, AudioSubsystem, &GameMemory);
@@ -435,14 +444,9 @@ WinMain(HINSTANCE hInstance,
 #endif
                 MSG Message = {0};
                 Win32ProcessWindowMessages(Message, WindowHandle, &WindowData, &State);
-               
-                // NOTE(Sleepster): Updating Window Dimensions here, WMSize is stupid 
-                {
-                    RECT Rect  = {};
-                    GetClientRect(WindowHandle, &Rect);
-                    WindowData.SizeData.Width = Rect.right - Rect.left;
-                    WindowData.SizeData.Height = Rect.top + Rect.bottom;
-                }
+
+                WindowData.SizeData.Width = SizeData.width;
+                WindowData.SizeData.Height = SizeData.height;
                 
                 // NOTE(Sleepster): Mouse Position Data 
                 {
@@ -451,7 +455,7 @@ WinMain(HINSTANCE hInstance,
                     ScreenToClient(WindowHandle, &MouseData);
 
                     State.GameInput.Keyboard.LastMouse = State.GameInput.Keyboard.CurrentMouse;
-                    State.GameInput.Keyboard.CurrentMouse = ivec2{MouseData.x, MouseData.y};
+                    State.GameInput.Keyboard.CurrentMouse = ivec2{MouseData.x, WindowData.SizeData.Height - MouseData.y};
                     State.GameInput.Keyboard.MouseDiff = State.GameInput.Keyboard.CurrentMouse - State.GameInput.Keyboard.LastMouse;
                 }
                 
@@ -485,6 +489,7 @@ WinMain(HINSTANCE hInstance,
                 RenderData.TransformCounter = 0;
                 RenderData.UITransformCounter = 0;
                 RenderData.GameTextTransformCounter = 0;
+
                 ArenaReset(&GameMemory.TransientStorage);
                 
                 // UPDATE DELTA TIME

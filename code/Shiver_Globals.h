@@ -4,13 +4,13 @@
 #define _SHIVER__GLOBALS_H
 #include "Shiver_Renderer.h"
 #include "Intrinsics.h"
-
+#include "util/Math.h"
 
 // PLATFORM GLOBLALS
 global_variable bool GlobalRunning;
 global_variable int64 PerfCountFrequency;
 global_variable real64 DeltaCounter;
-
+global_variable ivec2 SizeData = {1280, 720};
 
 // ENGINE VARIABLES
 global_variable const int32 SAMPLE_RATE = 48000;
@@ -20,8 +20,8 @@ global_variable const int32 MAX_SOUNDS = 128;
 
 // SIMULATION GLOBALS
 global_variable const int32 MAX_TRANSFORMS = 100000;
-global_variable const int32 MAX_UI_TRANSFORMS = 2000;
-global_variable const int32 MAX_TEXT_TRANSFORMS = 5000;
+global_variable const int32 MAX_UI_TRANSFORMS = 100000;
+global_variable const int32 MAX_TEXT_TRANSFORMS = 100000;
 
 global_variable const real32 SIMRATE = ((1.0f/90.0f)*1000);
 global_variable const real32 RENDERRATE = ((1.0f/144.0f)*1000);

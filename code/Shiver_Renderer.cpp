@@ -361,6 +361,8 @@ InitializeOpenGLRendererData(glrenderdata *RenderData, MemoryArena *TransientSto
         glGetUniformLocation(RenderData->Shaders[BASIC].Shader, "ScreenSize");
     RenderData->OrthographicMatrixID = 
         glGetUniformLocation(RenderData->Shaders[BASIC].Shader, "ProjectionMatrix");
+    RenderData->ViewMatrixID = 
+        glGetUniformLocation(RenderData->Shaders[BASIC].Shader, "ViewMatrix");
     
     GLuint VAO;
     glGenVertexArrays(1, &VAO);
@@ -391,6 +393,8 @@ InitializeOpenGLRendererData(glrenderdata *RenderData, MemoryArena *TransientSto
 
     RenderData->UICamera.Position = {0.0f, 0.0f};
     RenderData->UICamera.Viewport = {WORLD_WIDTH, WORLD_HEIGHT};
+
+    RenderData->ViewMatrix = mat4MatrixFromScaler(1.0f);
 
     glEnable(GL_FRAMEBUFFER_SRGB);
     glDisable(0x809D); // Disabling multisampling
@@ -445,14 +449,15 @@ sh_glRender(win32windowdata *WindowData, HWND WindowHandle, glrenderdata *Render
     {
         vec4 CameraInfo = 
         {
-            RenderData->GameCamera.Position.x - RenderData->GameCamera.Viewport.x / 2, 
-            RenderData->GameCamera.Position.x + RenderData->GameCamera.Viewport.x / 2, 
-            RenderData->GameCamera.Position.y - RenderData->GameCamera.Viewport.y / 2, 
-            RenderData->GameCamera.Position.y + RenderData->GameCamera.Viewport.y / 2
+            WindowData->SizeData.Width  * -0.5f,
+            WindowData->SizeData.Width  *  0.5f,
+            WindowData->SizeData.Height * -0.5f,
+            WindowData->SizeData.Height *  0.5f,
         };
 
         RenderData->GameCamera.Matrix = CreateOrthographicMatrix(CameraInfo);
         glUniformMatrix4fv(RenderData->OrthographicMatrixID, 1, GL_FALSE, (const GLfloat *)&RenderData->GameCamera.Matrix.Elements[0][0]);
+        glUniformMatrix4fv(RenderData->ViewMatrixID, 1, GL_FALSE, (const GLfloat *)&RenderData->ViewMatrix.Elements[0][0]);
 
         vec2 ScreenSize = vec2{(real32)WindowData->SizeData.Width, (real32)WindowData->SizeData.Height};
         glUniform2fv(RenderData->ScreenSizeID, 1, &ScreenSize.x);
@@ -464,24 +469,27 @@ sh_glRender(win32windowdata *WindowData, HWND WindowHandle, glrenderdata *Render
     // NOTE(Sleepster): Game Text rendering Pass
     {
         glUniformMatrix4fv(RenderData->OrthographicMatrixID, 1, GL_FALSE, (const GLfloat *)&RenderData->GameCamera.Matrix.Elements[0][0]);
+        glUniformMatrix4fv(RenderData->ViewMatrixID, 1, GL_FALSE, (const GLfloat *)&RenderData->ViewMatrix.Elements[0][0]);
         glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(renderertransform) * RenderData->GameTextTransformCounter, RenderData->GameTextTransforms);
 
-        glDrawArraysInstanced(GL_TRIANGLES, 0, 6, RenderData->UITransformCounter);
+        glDrawArraysInstanced(GL_TRIANGLES, 0, 6, RenderData->GameTextTransformCounter);
     }
 
     // NOTE(Sleepster): UI rendering Pass
     {
         vec4 CameraInfo = 
         {
-            RenderData->UICamera.Position.x - RenderData->UICamera.Viewport.x / 2, 
-            RenderData->UICamera.Position.x + RenderData->UICamera.Viewport.x / 2, 
-            RenderData->UICamera.Position.y - RenderData->UICamera.Viewport.y / 2, 
-            RenderData->UICamera.Position.y + RenderData->UICamera.Viewport.y / 2
+            WindowData->SizeData.Width  * -0.5f,
+            WindowData->SizeData.Width  *  0.5f,
+            WindowData->SizeData.Height * -0.5f,
+            WindowData->SizeData.Height *  0.5f,
         };
 
         RenderData->UICamera.Matrix = CreateOrthographicMatrix(CameraInfo);
         glUniformMatrix4fv(RenderData->OrthographicMatrixID, 1, GL_FALSE, (const GLfloat *)&RenderData->UICamera.Matrix.Elements[0][0]);
+        glUniformMatrix4fv(RenderData->ViewMatrixID, 1, GL_FALSE, (const GLfloat *)&RenderData->ViewMatrix.Elements[0][0]);
         glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(renderertransform) * RenderData->UITransformCounter, RenderData->UITransforms);
+
         glDrawArraysInstanced(GL_TRIANGLES, 0, 6, RenderData->UITransformCounter);
     }
 }

@@ -77,6 +77,7 @@ struct orthocamera2d
     mat4 Matrix;
     vec2 Position;
     vec2 Viewport;
+    vec2 Target;
     
     real32 Zoom;
 };
@@ -117,6 +118,7 @@ struct glrenderdata
     GLuint RendererTransformsSBOID;
     GLuint ScreenSizeID;
     GLuint OrthographicMatrixID;
+    GLuint ViewMatrixID;
 
     GLuint LM_FontAtlasID;
     int32 FontHeight;
@@ -129,6 +131,8 @@ struct glrenderdata
 
     orthocamera2d GameCamera;
     orthocamera2d UICamera;
+
+    mat4 ViewMatrix;
 
     vec4 ClearColor;
 };
@@ -151,42 +155,6 @@ HexToRGBA(int64 hex)
         (real32)A / 255.0f,
     };
 
-    return(Result);
-}
-
-///////////////////////////////////////////////////
-// NOTE(Sleepster): Matrix stuffs
-internal mat4
-CreateOrthographicMatrix(vec4 Data)
-{
-    mat4 Result = {};
-   
-    Result.Elements[3][0] = -(Data.Right + Data.Left) / (Data.Right - Data.Left);
-    Result.Elements[3][1] = -(Data.Top + Data.Bottom) / (Data.Top - Data.Bottom);
-    Result.Elements[3][2] =  0.0f;
-    Result.Elements[3][3] =  1.0f;
-    
-    Result.Elements[0][0] =  2.0f / (Data.Right - Data.Left);
-    Result.Elements[1][1] =  2.0f / (Data.Top - Data.Bottom);
-    Result.Elements[2][2] =  1.0f / (1.0f - 0.0f);
-    
-    return(Result);
-}
-
-internal mat4
-RotateZ(real32 Angle)
-{
-    mat4 Result = {};
-    
-    Result.Elements[0][0] = (real32)cos(Angle);
-    Result.Elements[1][0] = (real32)-sin(Angle);
-    
-    Result.Elements[0][1] = (real32)sin(Angle);
-    Result.Elements[1][1] = (real32)cos(Angle);
-    
-    Result.Elements[2][2] = 1.0f;
-    Result.Elements[3][3] = 1.0f;
-    
     return(Result);
 }
 

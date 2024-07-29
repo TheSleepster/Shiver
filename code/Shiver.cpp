@@ -26,7 +26,8 @@ GetRandom()
     x ^= x >> 7;
     x ^= x << 17;
     rng_state = x;
-    return x;}
+    return x;
+}
 
 internal inline real32
 GetRandomReal32()
@@ -39,6 +40,7 @@ GetRandomReal32_Range(real32 Minimum, real32 Maximum)
 {
     return((Maximum - Minimum)*GetRandomReal32() + Minimum);
 }
+
 // NOTE(Sleepster): Perhaps since Velocity no longer exists, we could instead change it by the inverse of the difference of the New Player Position
 // and the old player position
 internal void
@@ -492,6 +494,7 @@ DeleteEntity(entity *Entity)
     memset(Entity, 0, sizeof(struct entity));
 }
 
+// TODO(Sleepster): Make this actually work some day, I don't understand matrices
 internal vec2
 MouseToWorldSpace(Input *GameInput, win32windowdata *WindowData, glrenderdata *RenderData)
 {
@@ -499,21 +502,27 @@ MouseToWorldSpace(Input *GameInput, win32windowdata *WindowData, glrenderdata *R
 
     if(WindowData->SizeData.Width != 0)
     {
-        vec2 NDC = {(MouseData->CurrentMouse.x / WindowData->SizeData.Width * 0.5f) - 1.0f, 
-                 1.0f - (MouseData->CurrentMouse.y / WindowData->SizeData.Height * 0.5f)};
-        return(NDC);
+        // NOTE(Sleepster): get the NDC (Normalized Device Coordinates) 
+        vec2 ndc = {(MouseData->CurrentMouse.x / (WindowData->SizeData.Width * 0.5f)) - 1.0f, 
+                   (MouseData->CurrentMouse.y / (WindowData->SizeData.Height * 0.5f)) - 1.0f};
+
+        vec4 WorldPos = vec4{ndc.x, ndc.y, 0.0f, 1.0f};
+        WorldPos = mat4Transform(mat4Inverse(RenderData->GameCamera.Matrix), WorldPos);
+        WorldPos = mat4Transform(mat4Inverse(RenderData->ViewMatrix), WorldPos);
+
+        return(vec2{WorldPos.x, WorldPos.y});
     }
     return(vec2{0.0f, 0.0f});
 }
 
-extern "C"
+global_variable entity *Player = {};
+
+external
 GAME_ON_AWAKE(GameOnAwake)
 {
     AudioSubsystem = AudioEngineIn;
     sh_glLoadSpriteSheet(RenderData);
     
-    RenderData->GameCamera.Viewport = {WORLD_WIDTH, WORLD_HEIGHT};
-
     for(uint32 EntityIndex = 0;
         EntityIndex < MAX_ENTITIES;
         ++EntityIndex)
@@ -522,17 +531,16 @@ GAME_ON_AWAKE(GameOnAwake)
         DeleteEntity(temp);
     }
 
-    entity *en2 = CreateEntity(&State->World);
-    SetupPlayer(en2, RenderData);
-    en2->Position = {11.1f, 11.1f};
+    Player = CreateEntity(&State->World);
+    SetupPlayer(Player, RenderData);
 
     for(uint32 Index = 0;
-        Index < 100;
+        Index < 1000;
         ++Index)
     {
         entity *en = CreateEntity(&State->World);
         SetupRock(en, RenderData);
-        en->Position = vec2{GetRandomReal32_Range(-WORLD_WIDTH * 4, WORLD_WIDTH * 4), GetRandomReal32_Range(-WORLD_HEIGHT * 4, WORLD_HEIGHT * 4)};
+        en->Position = vec2{GetRandomReal32_Range(-WORLD_WIDTH * 4.0f, WORLD_WIDTH * 4.0f), GetRandomReal32_Range(-WORLD_HEIGHT * 4.0f, WORLD_HEIGHT * 4.0f)};    
     }
 
     sh_glSetClearColor(RenderData, COLOR_TEAL);
@@ -547,7 +555,7 @@ GAME_ON_AWAKE(GameOnAwake)
 // of framerate, but the main frame-indepenent update function will still keep the position correct, potentially fixing our collider
 // problems
 
-extern "C"
+external
 GAME_FIXED_UPDATE(GameFixedUpdate)
 {
     // NOTE(Sleepster): For some reason a "for" loop being present within this fixedupdate causes the game to break
@@ -559,28 +567,44 @@ GAME_FIXED_UPDATE(GameFixedUpdate)
         if((Temp->Flags & IS_VALID) && (Temp->Arch == PLAYER))
         {
             UpdatePlayerPosition(Temp, State, Time);
-            v2Approach(&RenderData->GameCamera.Position, Temp->Position, 0.005f, Time.DeltaTime);
+            v2Approach(&RenderData->GameCamera.Position, RenderData->GameCamera.Target, 0.003f, Time.DeltaTime);
         }
     }
 }
 
-extern "C"
+external 
 GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
 {
-    MouseToWorldSpace(&State->GameInput, WindowData, RenderData);
-    DrawUIText(sprints(&Memory->TransientStorage, STR("%f, %f"), State->World.Entities[0].Position.x, State->World.Entities[0].Position.y), {0.0f, 0.0f}, 0.05f, COLOR_BLACK, 0, RenderData);
-    DrawInWorldText(sprints(&Memory->TransientStorage, STR("%f, %f"), State->World.Entities[0].Position.x, State->World.Entities[0].Position.y), {0.0f, 0.0f}, 0.05f, COLOR_BLACK, 0, RenderData);
+    RenderData->GameCamera.Target = Player->Position;
+    RenderData->GameCamera.Zoom = 4.0f;
+    RenderData->ViewMatrix = mat4MakeScale(vec3{1.0f, 1.0f, 1.0f});
+    RenderData->ViewMatrix = mat4Multiply(RenderData->ViewMatrix, mat4Translate(v2Expand(RenderData->GameCamera.Position, 0.0f)));
+    RenderData->ViewMatrix = mat4Multiply(RenderData->ViewMatrix, mat4MakeScale(vec3{1.0f * RenderData->GameCamera.Zoom, 1.0f * RenderData->GameCamera.Zoom, 1.0f}));
+
+    vec2 MousePos = v2Cast(State->GameInput.Keyboard.CurrentMouse);
+    DrawUIText(sprints(&Memory->TransientStorage, STR("%f, %f"), MousePos.x, MousePos.y), {0.0f, 200.0f}, 0.05f, COLOR_BLACK, 0, RenderData);
 
     for(uint32 EntityIndex = 0;
         EntityIndex < State->World.EntityCounter;
         ++EntityIndex)
     {
-        entity *Temp = &State->World.Entities[EntityIndex];
-        if(Temp->Flags & IS_VALID)
+        entity *en = &State->World.Entities[EntityIndex];
+        vec2 Position = en->Position;
+        if(en->Flags & IS_VALID)
         {
-            DrawEntityStaticSprite2D(Temp, COLOR_WHITE, 0, RenderData);
-            UpdateEntityColliderData(Temp);
-            RenderData->GameCamera.Viewport = {WORLD_WIDTH, WORLD_HEIGHT};
+            switch(en->Arch)
+            {
+                case PLAYER:
+                {
+                    DrawEntityStaticSprite2D(en, COLOR_WHITE, 0, RenderData);
+                    RenderData->GameCamera.Viewport = {WORLD_WIDTH, WORLD_HEIGHT};
+                }break;
+                case ROCK:
+                {
+                    DrawEntityStaticSprite2D(en, COLOR_WHITE, 0, RenderData);
+                }break;
+            };
+            UpdateEntityColliderData(en);
         }
     }
 }

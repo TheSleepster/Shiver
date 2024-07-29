@@ -9,6 +9,7 @@
 #include "Shiver_AudioEngine.h"
 #include "Shiver_Globals.h"
 #include "util/Math.h"
+#include "util/MemoryArena.h"
 
 enum vertex_positions
 {
@@ -145,31 +146,43 @@ sh_glConvertToLinearColor(vec4 Color)
     return(Result);
 }
 
-internal void
-sh_glDrawStaticSprite2D(entity_archetype Arch, vec2 Position, vec4 Color, 
-                        int RenderingOptions, glrenderdata *RenderData)
-{
-    static_sprite_data SpriteData = sh_glGetSprite(Arch, RenderData);
-    
-    renderertransform Transform  = {};
-    Transform.AtlasOffset = SpriteData.AtlasOffset;
-    Transform.SpriteSize = SpriteData.SpriteSize;
-    Transform.Size = v2Cast(RenderData->StaticSprites[Arch].SpriteSize);
-    Transform.WorldPosition = Position - (Transform.Size / 2);
-    Transform.MaterialColor = sh_glConvertToLinearColor(Color);
-    Transform.RenderingOptions = RenderingOptions;
-    
-    RenderData->RendererTransforms[RenderData->TransformCounter++] = Transform;
-}
-
-
 internal void 
 sh_glSetClearColor(glrenderdata *RenderData, vec4 Color)
 {
     RenderData->ClearColor = Color;
 }
 
-// TODO(Sleepster): Proper font scaling
+internal void 
+DrawInWorldText(string Text, vec2 Position, real32 Scale, 
+           vec4 Color, uint32 LayerMask, glrenderdata *RenderData)
+{
+    vec2 TextOrigin = Position;
+    
+    while(char C = *(Text.Data++))
+    {
+        if(C == '\n')
+        {
+            Position.y += RenderData->FontHeight * Scale;
+            Position.x = TextOrigin.x;
+            continue;
+        }
+
+        glyph Glyph = RenderData->Glyphs[C];
+        renderertransform Transform = {};
+        
+        Transform.MaterialColor = Color;
+        Transform.WorldPosition = vec2{Position.x - (Glyph.Offset.x * Scale), Position.y - (Glyph.Offset.y * Scale)};
+        Transform.AtlasOffset = Glyph.uv;
+        Transform.SpriteSize = Glyph.GlyphSize;
+        Transform.Size = v2Cast(Glyph.GlyphSize) * (real32)Scale;
+        Transform.RenderingOptions = RENDERING_OPTION_FONT;
+        Transform.LayerMask = LayerMask;
+
+        RenderData->GameTextTransforms[RenderData->GameTextTransformCounter++] = Transform;
+        Position.x += Glyph.Advance.x * Scale;
+    }
+}
+
 internal void 
 DrawUIText(string Text, vec2 Position, real32 Scale, 
            vec4 Color, uint32 LayerMask, glrenderdata *RenderData)
@@ -200,39 +213,22 @@ DrawUIText(string Text, vec2 Position, real32 Scale,
     }
 }
 
-internal void 
-DrawInWorldText(string Text, vec2 Position, real32 Scale, 
-           vec4 Color, uint32 LayerMask, glrenderdata *RenderData)
+internal void
+sh_glDrawStaticSprite2D(entity_archetype Arch, vec2 Position, vec4 Color, 
+                        int RenderingOptions, glrenderdata *RenderData)
 {
-    vec2 TextOrigin = Position;
+    static_sprite_data SpriteData = sh_glGetSprite(Arch, RenderData);
     
-    while(char C = *(Text.Data++))
-    {
-        if(C == '\n')
-        {
-            Position.y += RenderData->FontHeight * Scale;
-            Position.x = TextOrigin.x;
-            continue;
-        }
-
-        glyph Glyph = RenderData->Glyphs[C];
-        renderertransform Transform = {};
-        
-        Transform.MaterialColor = Color;
-        Transform.WorldPosition = {(Position.x + Glyph.Offset.x) * Scale, (Position.y - Glyph.Offset.y) * (Scale)};
-        Transform.AtlasOffset = Glyph.uv;
-        Transform.SpriteSize = Glyph.GlyphSize;
-        Transform.Size = v2Cast(Glyph.GlyphSize) * (real32)Scale;
-        Transform.RenderingOptions = RENDERING_OPTION_FONT;
-        Transform.LayerMask = LayerMask;
-
-        RenderData->GameTextTransforms[RenderData->GameTextTransformCounter++] = Transform;
-        Position.x += Glyph.Advance.x;
-    }
+    renderertransform Transform  = {};
+    Transform.AtlasOffset = SpriteData.AtlasOffset;
+    Transform.SpriteSize = SpriteData.SpriteSize;
+    Transform.Size = v2Cast(RenderData->StaticSprites[Arch].SpriteSize);
+    Transform.WorldPosition = Position - (Transform.Size / 2);
+    Transform.MaterialColor = sh_glConvertToLinearColor(Color);
+    Transform.RenderingOptions = 0;
+    
+    RenderData->RendererTransforms[RenderData->TransformCounter++] = Transform;
 }
-
-///////////////////////////////////////////////////
-// NOTE(Sleepster): Game Sprite Getter
 
 #define GAME_UPDATE_AND_RENDER(name) void name(gamestate *State, glrenderdata *RenderData, win32windowdata *WindowData, time Time, game_memory *Memory)
 typedef GAME_UPDATE_AND_RENDER(game_update_and_render);

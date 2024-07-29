@@ -4,6 +4,7 @@ layout(std430, Binding = 0) buffer TransformSBO
 };
 
 uniform mat4 ProjectionMatrix;
+uniform mat4 ViewMatrix;
 uniform vec2 ScreenSize;
 
 // Output
@@ -55,7 +56,7 @@ void main()
     };
     
     vec2 VertexPos = Vertices[gl_VertexID];
-    gl_Position = ProjectionMatrix * vec4(VertexPos, 0.0f, 1.0f);
+    gl_Position = ProjectionMatrix * ViewMatrix * vec4(VertexPos, 0.0f, 1.0f);
 
     TextureCoordsOut = TextureCoords[gl_VertexID];
     MaterialColor = Transform.MaterialColor;
