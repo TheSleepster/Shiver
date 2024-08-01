@@ -74,12 +74,17 @@ struct static_sprite_data
 
 struct orthocamera2d
 {
-    mat4 Matrix;
+// NOTE(Sleepster): Camera Position and matrix
+    mat4 CameraMatrix;
     vec2 Position;
     vec2 Viewport;
     vec2 Target;
-    
+
     real32 Zoom;
+
+// NOTE(Sleepster): Origin data
+    vec3 OriginPosition;
+    mat4 OriginMatrix;
 };
 
 struct glyph

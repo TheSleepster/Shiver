@@ -2,8 +2,8 @@
 #include "Shiver.h"
 #include "Shiver_AudioEngine.h"
 #include "Shiver_Globals.h"
+
 #include "util/Math.h"
-#include "util/ShiverArray.h"
 
 // Solving order
 // - Do Caveman
@@ -15,6 +15,7 @@
 #define RAND_MAX_64 0xFFFFFFFFFFFFFFFFull
 #define MULTIPLIER 6364136223846793005ull
 #define INCREMENT 1442695040888963407ull 
+
 
 internal inline uint64 
 GetRandom()
@@ -395,11 +396,6 @@ UpdatePlayerPosition(entity *Player, gamestate *State, time Time)
 }
 
 internal void
-DrawTilemap(const uint8 Tilemap[TILEMAP_SIZE_Y][TILEMAP_SIZE_X], glrenderdata *RenderData, gamestate *State)
-{
-}
-
-internal void
 UpdateEntityColliderData(entity *Entity)
 {
     Entity->Vertex[TOP_LEFT]     = {Entity->Position};
@@ -506,11 +502,14 @@ MouseToWorldSpace(Input *GameInput, win32windowdata *WindowData, glrenderdata *R
         vec2 ndc = {(MouseData->CurrentMouse.x / (WindowData->SizeData.Width * 0.5f)) - 1.0f, 
                    (MouseData->CurrentMouse.y / (WindowData->SizeData.Height * 0.5f)) - 1.0f};
 
-        vec4 WorldPos = vec4{ndc.x, ndc.y, 0.0f, 1.0f};
-        WorldPos = mat4Transform(mat4Inverse(RenderData->GameCamera.Matrix), WorldPos);
-        WorldPos = mat4Transform(mat4Inverse(RenderData->ViewMatrix), WorldPos);
-
-        return(vec2{WorldPos.x, WorldPos.y});
+        vec4 ClipSpace = vec4{ndc.x, ndc.y, 0.0f, 1.0f};
+        // NOTE(Sleepster): Revert the vertex position from the projection into our viewspace. 
+        vec4 ViewSpace = mat4Transform(mat4Inverse(RenderData->GameCamera.CameraMatrix), ClipSpace);
+        // NOTE(Sleepster): Revert them back to our ViewSpace 
+             ViewSpace = mat4Transform(mat4Inverse(RenderData->ViewMatrix), ViewSpace);
+        
+        vec2 WorldPos = vec2{ViewSpace.x, ViewSpace.y};
+        return(WorldPos);
     }
     return(vec2{0.0f, 0.0f});
 }
@@ -535,7 +534,7 @@ GAME_ON_AWAKE(GameOnAwake)
     SetupPlayer(Player, RenderData);
 
     for(uint32 Index = 0;
-        Index < 1000;
+        Index < 10;
         ++Index)
     {
         entity *en = CreateEntity(&State->World);
@@ -567,7 +566,7 @@ GAME_FIXED_UPDATE(GameFixedUpdate)
         if((Temp->Flags & IS_VALID) && (Temp->Arch == PLAYER))
         {
             UpdatePlayerPosition(Temp, State, Time);
-            v2Approach(&RenderData->GameCamera.Position, RenderData->GameCamera.Target, 0.003f, Time.DeltaTime);
+            v2Approach(&RenderData->GameCamera.Position, RenderData->GameCamera.Target, 0.006f, Time.DeltaTime);
         }
     }
 }
@@ -577,13 +576,14 @@ GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
 {
     RenderData->GameCamera.Target = Player->Position;
     RenderData->GameCamera.Zoom = 4.0f;
+
     RenderData->ViewMatrix = mat4MakeScale(vec3{1.0f, 1.0f, 1.0f});
-    RenderData->ViewMatrix = mat4Multiply(RenderData->ViewMatrix, mat4Translate(v2Expand(RenderData->GameCamera.Position, 0.0f)));
+    RenderData->ViewMatrix = mat4Multiply(RenderData->ViewMatrix, mat4Translate(v2Expand(RenderData->GameCamera.Position, 1.0f)));
     RenderData->ViewMatrix = mat4Multiply(RenderData->ViewMatrix, mat4MakeScale(vec3{1.0f * RenderData->GameCamera.Zoom, 1.0f * RenderData->GameCamera.Zoom, 1.0f}));
 
-    vec2 MousePos = v2Cast(State->GameInput.Keyboard.CurrentMouse);
-    DrawUIText(sprints(&Memory->TransientStorage, STR("%f, %f"), MousePos.x, MousePos.y), {0.0f, 200.0f}, 0.05f, COLOR_BLACK, 0, RenderData);
+    vec2 MousePos = MouseToWorldSpace(&State->GameInput, WindowData, RenderData);
 
+    DrawUIText(sprints(&Memory->TransientStorage, STR("%f, %f"), MousePos.x, MousePos.y), {0.0f, 200.0f}, 0.05f, COLOR_BLACK, 0, RenderData);
     for(uint32 EntityIndex = 0;
         EntityIndex < State->World.EntityCounter;
         ++EntityIndex)
@@ -597,11 +597,12 @@ GAME_UPDATE_AND_RENDER(GameUnlockedUpdate)
                 case PLAYER:
                 {
                     DrawEntityStaticSprite2D(en, COLOR_WHITE, 0, RenderData);
-                    RenderData->GameCamera.Viewport = {WORLD_WIDTH, WORLD_HEIGHT};
                 }break;
                 case ROCK:
                 {
+                    vec2 EnPosition = en->Position;
                     DrawEntityStaticSprite2D(en, COLOR_WHITE, 0, RenderData);
+//                    DrawInWorldText(sprints(&Memory->TransientStorage, STR("%f, %f"), EnPosition.x, EnPosition.y), {EnPosition.x, EnPosition.y}, 0.05f, COLOR_BLACK, 0, RenderData);
                 }break;
             };
             UpdateEntityColliderData(en);

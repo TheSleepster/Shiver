@@ -1,5 +1,5 @@
 @echo off
-REM /Ox /O2 /Ot for release
+REM /Ox /O2 /Ot /arch:AVX2 for release 
 REM -Bt+ for timing info
 REM remove -Zi
 

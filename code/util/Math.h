@@ -1143,7 +1143,7 @@ operator==(vec4 A, vec4 B)
 
 // VECTOR4 FUNCTIONS
 internal inline vec4
-v4Create(vec3 A, real32 W)
+v3Expand(vec3 A, real32 W)
 {
     vec4 Result = {};
 
@@ -1220,10 +1220,12 @@ mat4Transform(mat4 B, vec4 A)
 {
     vec4 Result = {};
 
-    Result.x = B.Elements[0][0] * A.x + B.Elements[0][1] * A.y + B.Elements[0][2] * A.z + B.Elements[0][3] * A.w;
-    Result.y = B.Elements[1][0] * A.x + B.Elements[1][1] * A.y + B.Elements[1][2] * A.z + B.Elements[1][3] * A.w;
-    Result.z = B.Elements[2][0] * A.x + B.Elements[2][1] * A.y + B.Elements[2][2] * A.z + B.Elements[2][3] * A.w;
-    Result.w = B.Elements[3][0] * A.x + B.Elements[3][1] * A.y + B.Elements[3][2] * A.z + B.Elements[3][3] * A.w;
+    real32 x = B.Elements[0][0] * A.x + B.Elements[0][1] * A.y + B.Elements[0][2] * A.z + B.Elements[0][3] * A.w;
+    real32 y = B.Elements[1][0] * A.x + B.Elements[1][1] * A.y + B.Elements[1][2] * A.z + B.Elements[1][3] * A.w;
+    real32 z = B.Elements[2][0] * A.x + B.Elements[2][1] * A.y + B.Elements[2][2] * A.z + B.Elements[2][3] * A.w;
+    real32 w = B.Elements[3][0] * A.x + B.Elements[3][1] * A.y + B.Elements[3][2] * A.z + B.Elements[3][3] * A.w;
+
+    Result = vec4{x,y,z,w};
 
     return(Result);
 }
@@ -1401,10 +1403,10 @@ WRONGmat4Inverse(mat4 A)
     B10 *= InvDeterminant;
     B32 *= InvDeterminant;
 
-    Result.Columns[0] = v4Create((v3Cross(A.Columns[1].xyz, B32) + (C23 * A.Columns[1].w)), -(v3Dot(A.Columns[1].xyz, C23)));
-    Result.Columns[1] = v4Create((v3Cross(B32, A.Columns[0].xyz) - (C23 * A.Columns[0].w)), +(v3Dot(A.Columns[0].xyz, C23)));
-    Result.Columns[2] = v4Create((v3Cross(A.Columns[3].xyz, B10) + (C01 * A.Columns[3].w)), -(v3Dot(A.Columns[3].xyz, C01)));
-    Result.Columns[3] = v4Create((v3Cross(B10, A.Columns[2].xyz) - (C01 * A.Columns[2].w)), +(v3Dot(A.Columns[2].xyz, C01)));
+    Result.Columns[0] = v3Expand((v3Cross(A.Columns[1].xyz, B32) + (C23 * A.Columns[1].w)), -(v3Dot(A.Columns[1].xyz, C23)));
+    Result.Columns[1] = v3Expand((v3Cross(B32, A.Columns[0].xyz) - (C23 * A.Columns[0].w)), +(v3Dot(A.Columns[0].xyz, C23)));
+    Result.Columns[2] = v3Expand((v3Cross(A.Columns[3].xyz, B10) + (C01 * A.Columns[3].w)), -(v3Dot(A.Columns[3].xyz, C01)));
+    Result.Columns[3] = v3Expand((v3Cross(B10, A.Columns[2].xyz) - (C01 * A.Columns[2].w)), +(v3Dot(A.Columns[2].xyz, C01)));
 
     return(mat4Transpose(Result));
 }

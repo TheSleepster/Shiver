@@ -6,7 +6,7 @@
 #if SHIVER_SLOW
 
 #define Assert(Expression, Message) if(!(Expression)) {OutputDebugStringA(Message); DebugBreak();}
-#define Check(Expression, Message) if(!(Expression)) {OutputDebugStringA(Message);}
+#define Check(Expression, Message) if(!(Expression)) {OutputDebugStringA(Message); DebugBreak();}
 #define dAssert(Expression) if(!(Expression)) {DebugBreak();}
 #define Trace(Message) {OutputDebugStringA(Message);}
 #define printm(Message, ...) {char BUFFER[256] = {}; sprintf(BUFFER, Message, __VA_ARGS__); OutputDebugStringA(BUFFER);}
@@ -62,6 +62,7 @@ typedef double real64;
 #define SECOND_ARG(arg1, arg2, ...) arg2
 
 #include "util/sh_Strings.h"
+#include "util/sh_Array.h"
 
 #ifndef NOMINMAX
 #define NOMINMAX
